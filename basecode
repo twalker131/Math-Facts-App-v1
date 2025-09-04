@@ -1,713 +1,571 @@
-import React, { useState, useEffect } from 'react';
-import { Upload, Plus, User, BookOpen, TrendingUp, LogOut, CheckCircle, XCircle } from 'lucide-react';
-
-const MathFactsTracker = () => {
-  const [currentUser, setCurrentUser] = useState(null);
-  const [userType, setUserType] = useState('login'); // 'login', 'student', 'teacher'
-  const [students, setStudents] = useState([]);
-  const [studentProgress, setStudentProgress] = useState({});
-  
-  // Student interface states
-  const [currentProblem, setCurrentProblem] = useState(null);
-  const [userAnswer, setUserAnswer] = useState('');
-  const [feedback, setFeedback] = useState(null);
-  const [score, setScore] = useState({ correct: 0, total: 0 });
-
-  // Teacher interface states
-  const [selectedStudent, setSelectedStudent] = useState(null);
-  const [newStudent, setNewStudent] = useState({ id: '', name: '', grade: '' });
-
-  useEffect(() => {
-    // Initialize with sample data
-    const sampleStudents = [
-      { id: '001', name: 'Alice Johnson', grade: '3' },
-      { id: '002', name: 'Bob Smith', grade: '3' },
-      { id: '003', name: 'Carol Davis', grade: '4' }
-    ];
-    setStudents(sampleStudents);
-    
-    // Initialize progress tracking for each student
-    const initialProgress = {};
-    sampleStudents.forEach(student => {
-      initialProgress[student.id] = {};
-    });
-    setStudentProgress(initialProgress);
-  }, []);
-
-  // Generate random math problem
-  const generateProblem = () => {
-    const num1 = Math.floor(Math.random() * 21) - 10; // -10 to 10
-    const num2 = Math.floor(Math.random() * 21) - 10;
-    const operation = Math.random() < 0.5 ? '+' : '-';
-    const answer = operation === '+' ? num1 + num2 : num1 - num2;
-    
-    return {
-      num1,
-      num2,
-      operation,
-      answer,
-      key: `${num1}${operation}${num2}`
-    };
-  };
-
-  // Handle CSV upload
-  const handleCSVUpload = (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const text = e.target.result;
-      const lines = text.split('\n').filter(line => line.trim());
-      const newStudents = [];
-
-      lines.forEach((line, index) => {
-        if (index === 0) return; // Skip header
-        const [id, name, grade] = line.split(',').map(item => item.trim().replace(/"/g, ''));
-        if (id && name && grade) {
-          newStudents.push({ id, name, grade });
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Math Facts Tracker</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+            min-height: 100vh;
         }
-      });
-
-      setStudents(prev => [...prev, ...newStudents]);
-      
-      // Initialize progress for new students
-      setStudentProgress(prev => {
-        const updated = { ...prev };
-        newStudents.forEach(student => {
-          updated[student.id] = {};
-        });
-        return updated;
-      });
-    };
-    reader.readAsText(file);
-  };
-
-  // Add student manually
-  const addStudent = () => {
-    if (newStudent.id && newStudent.name && newStudent.grade) {
-      setStudents(prev => [...prev, { ...newStudent }]);
-      setStudentProgress(prev => ({
-        ...prev,
-        [newStudent.id]: {}
-      }));
-      setNewStudent({ id: '', name: '', grade: '' });
-    }
-  };
-
-  // Handle student login
-  const handleStudentLogin = (studentId) => {
-    const student = students.find(s => s.id === studentId);
-    if (student) {
-      setCurrentUser(student);
-      setUserType('student');
-      setCurrentProblem(generateProblem());
-      setScore({ correct: 0, total: 0 });
-    } else {
-      alert('Student ID not found!');
-    }
-  };
-
-  // Handle student answer submission
-  const submitAnswer = () => {
-    if (userAnswer === '') return;
-
-    const isCorrect = parseInt(userAnswer) === currentProblem.answer;
-    const newScore = {
-      correct: score.correct + (isCorrect ? 1 : 0),
-      total: score.total + 1
-    };
-    
-    setScore(newScore);
-    setFeedback({ correct: isCorrect, answer: currentProblem.answer });
-
-    // Update student progress with consecutive tracking
-    setStudentProgress(prev => {
-      const currentProgress = prev[currentUser.id] || {};
-      const factProgress = currentProgress[currentProblem.key] || { 
-        attempts: 0, 
-        correct: 0, 
-        consecutiveCorrect: 0,
-        mastered: false,
-        history: []
-      };
-
-      const newConsecutiveCorrect = isCorrect ? factProgress.consecutiveCorrect + 1 : 0;
-      const newMastered = newConsecutiveCorrect >= 2 || factProgress.mastered;
-
-      return {
-        ...prev,
-        [currentUser.id]: {
-          ...currentProgress,
-          [currentProblem.key]: {
-            attempts: factProgress.attempts + 1,
-            correct: factProgress.correct + (isCorrect ? 1 : 0),
-            consecutiveCorrect: newConsecutiveCorrect,
-            mastered: newMastered,
-            lastAttempt: new Date().toISOString(),
-            history: [...factProgress.history, isCorrect].slice(-5) // Keep last 5 attempts
-          }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            text-align: center;
         }
-      };
-    });
-
-    setTimeout(() => {
-      setFeedback(null);
-      setUserAnswer('');
-      setCurrentProblem(generateProblem());
-    }, 2000);
-  };
-
-  // Calculate mastery percentage for a student
-  const calculateMasteryPercentage = (studentId) => {
-    const progress = studentProgress[studentId] || {};
-    const masteredCount = Object.values(progress).filter(fact => fact.mastered).length;
-    return ((masteredCount / 882) * 100).toFixed(1);
-  };
-
-  // Get mastery status for display
-  const getMasteryStatus = (factProgress) => {
-    if (factProgress.mastered) return 'mastered';
-    if (factProgress.consecutiveCorrect === 1) return 'close';
-    if (factProgress.attempts > 0) return 'practicing';
-    return 'new';
-  };
-
-  // Login Screen
-  if (userType === 'login') {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-        <div className="bg-white rounded-lg shadow-lg p-8 w-full max-w-md">
-          <h1 className="text-3xl font-bold text-center text-gray-800 mb-8">Math Facts Tracker</h1>
-          
-          <div className="space-y-4">
-            <StudentLogin onLogin={handleStudentLogin} />
-            
-            <div className="text-center">
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-gray-300"></div>
-                </div>
-                <div className="relative flex justify-center text-sm">
-                  <span className="px-2 bg-white text-gray-500">or</span>
-                </div>
-              </div>
-            </div>
-            
-            <button
-              onClick={() => setUserType('teacher')}
-              className="w-full flex items-center justify-center px-4 py-3 border border-transparent rounded-md shadow-sm text-base font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-            >
-              <User className="mr-2 h-5 w-5" />
-              Teacher Dashboard
-            </button>
-          </div>
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+        }
+        .status {
+            margin: 20px 0;
+            padding: 10px;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .status.connected {
+            background: #e8f5e8;
+            color: #2e7d32;
+            border: 1px solid #4caf50;
+        }
+        .status.connecting {
+            background: #fff3e0;
+            color: #f57f17;
+            border: 1px solid #ff9800;
+        }
+        .status.local {
+            background: #fce4ec;
+            color: #c2185b;
+            border: 1px solid #e91e63;
+        }
+        input[type="text"], input[type="number"] {
+            padding: 15px;
+            font-size: 18px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            width: 200px;
+            margin: 10px;
+            text-align: center;
+        }
+        button {
+            padding: 15px 25px;
+            font-size: 18px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 10px;
+            font-weight: bold;
+        }
+        .btn-primary {
+            background: #2196f3;
+            color: white;
+        }
+        .btn-success {
+            background: #4caf50;
+            color: white;
+        }
+        .btn-secondary {
+            background: #757575;
+            color: white;
+        }
+        button:hover {
+            opacity: 0.9;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .problem {
+            font-size: 4em;
+            margin: 30px 0;
+            color: #333;
+            font-weight: bold;
+        }
+        .feedback {
+            font-size: 2em;
+            margin: 20px 0;
+            font-weight: bold;
+        }
+        .feedback.correct {
+            color: #4caf50;
+        }
+        .feedback.incorrect {
+            color: #f44336;
+        }
+        .student-list {
+            text-align: left;
+            max-height: 300px;
+            overflow-y: auto;
+            margin: 20px 0;
+        }
+        .student-item {
+            padding: 10px;
+            border: 1px solid #ddd;
+            margin: 5px 0;
+            border-radius: 5px;
+            cursor: pointer;
+            background: #f9f9f9;
+        }
+        .student-item:hover {
+            background: #e3f2fd;
+        }
+        .student-item.selected {
+            background: #bbdefb;
+            border-color: #2196f3;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .card {
+            background: #f5f5f5;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        .card h3 {
+            margin: 0 0 10px 0;
+            color: #333;
+        }
+        .card .number {
+            font-size: 2em;
+            font-weight: bold;
+            color: #2196f3;
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Math Facts Tracker</h1>
+        
+        <!-- Status Indicator -->
+        <div id="status" class="status connecting">
+            🔄 Connecting to Firebase...
         </div>
-      </div>
-    );
-  }
-
-  // Student Interface
-  if (userType === 'student') {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-100 p-4">
-        <div className="max-w-2xl mx-auto">
-          <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-            <div className="flex justify-between items-center">
-              <div>
-                <h2 className="text-2xl font-bold text-gray-800">Welcome, {currentUser.name}!</h2>
-                <p className="text-gray-600">Grade {currentUser.grade} • Score: {score.correct}/{score.total}</p>
-              </div>
-              <button
-                onClick={() => {
-                  setCurrentUser(null);
-                  setUserType('login');
-                  setFeedback(null);
-                }}
-                className="flex items-center px-4 py-2 text-gray-600 hover:text-gray-800"
-              >
-                <LogOut className="h-5 w-5 mr-2" />
-                Logout
-              </button>
-            </div>
-          </div>
-
-          {currentProblem && (
-            <div className="bg-white rounded-lg shadow-lg p-8 text-center">
-              <div className="text-6xl font-bold text-gray-800 mb-8">
-                {currentProblem.num1} {currentProblem.operation} {currentProblem.num2} = ?
-              </div>
-              
-              {!feedback ? (
-                <div className="space-y-6">
-                  <input
-                    type="number"
-                    value={userAnswer}
-                    onChange={(e) => setUserAnswer(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && submitAnswer()}
-                    className="w-32 text-3xl text-center border-2 border-gray-300 rounded-lg p-4 focus:border-blue-500 focus:outline-none"
-                    placeholder="?"
-                    autoFocus
-                  />
-                  <div>
-                    <button
-                      onClick={submitAnswer}
-                      disabled={userAnswer === ''}
-                      className="px-8 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
-                    >
-                      Submit Answer
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-6">
-                  {feedback.correct ? (
-                    <div className="flex items-center justify-center text-green-600">
-                      <CheckCircle className="h-16 w-16 mr-4" />
-                      <span className="text-4xl font-bold">Correct!</span>
-                    </div>
-                  ) : (
-                    <div className="flex items-center justify-center text-red-600">
-                      <XCircle className="h-16 w-16 mr-4" />
-                      <div>
-                        <div className="text-4xl font-bold">Not quite!</div>
-                        <div className="text-2xl mt-2">The answer is {feedback.answer}</div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
+        
+        <!-- Login Screen -->
+        <div id="loginScreen">
+            <h2>Student Login</h2>
+            <input type="text" id="studentId" placeholder="Enter Student ID" />
+            <br>
+            <button class="btn-primary" onclick="studentLogin()">Start Practice</button>
+            <br><br>
+            <button class="btn-success" onclick="showTeacherDashboard()">Teacher Dashboard</button>
         </div>
-      </div>
-    );
-  }
-
-  // Teacher Interface
-  return (
-    <div className="min-h-screen bg-gray-50 p-4">
-      <div className="max-w-6xl mx-auto">
-        <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-          <div className="flex justify-between items-center">
-            <h1 className="text-3xl font-bold text-gray-800">Teacher Dashboard</h1>
-            <button
-              onClick={() => setUserType('login')}
-              className="flex items-center px-4 py-2 text-gray-600 hover:text-gray-800"
-            >
-              <LogOut className="h-5 w-5 mr-2" />
-              Back to Login
-            </button>
-          </div>
+        
+        <!-- Student Practice Screen -->
+        <div id="practiceScreen" class="hidden">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h2 id="studentWelcome"></h2>
+                    <p id="studentScore">Score: 0/0</p>
+                </div>
+                <button class="btn-secondary" onclick="logout()">Logout</button>
+            </div>
+            
+            <div id="problemArea">
+                <div class="problem" id="problem"></div>
+                <input type="number" id="answer" placeholder="?" style="font-size: 2em; width: 150px;" />
+                <br>
+                <button class="btn-primary" onclick="submitAnswer()">Submit Answer</button>
+            </div>
+            
+            <div id="feedback" class="feedback hidden"></div>
         </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Student Management */}
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            <h2 className="text-2xl font-semibold mb-4 flex items-center">
-              <User className="mr-2" />
-              Student Management
-            </h2>
+        
+        <!-- Teacher Dashboard -->
+        <div id="teacherScreen" class="hidden">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h2>Teacher Dashboard</h2>
+                <button class="btn-secondary" onclick="logout()">Back to Login</button>
+            </div>
             
-            {/* CSV Upload */}
-            <div className="mb-6">
-              <label className="flex items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
-                <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                  <Upload className="h-8 w-8 mb-2 text-gray-400" />
-                  <p className="mb-2 text-sm text-gray-500">
-                    <span className="font-semibold">Click to upload CSV</span>
-                  </p>
-                  <p className="text-xs text-gray-500">CSV format: ID, Name, Grade</p>
+            <div class="grid">
+                <div class="card">
+                    <h3>Total Students</h3>
+                    <div class="number" id="totalStudents">5</div>
                 </div>
-                <input type="file" className="hidden" accept=".csv" onChange={handleCSVUpload} />
-              </label>
+                <div class="card">
+                    <h3>Average Mastery</h3>
+                    <div class="number" id="averageMastery">0%</div>
+                </div>
+                <div class="card">
+                    <h3>Active Today</h3>
+                    <div class="number" id="activeToday">0</div>
+                </div>
             </div>
-
-            {/* Manual Student Addition */}
-            <div className="space-y-3">
-              <h3 className="text-lg font-semibold">Add Student Manually</h3>
-              <div className="grid grid-cols-3 gap-2">
-                <input
-                  type="text"
-                  placeholder="Student ID"
-                  value={newStudent.id}
-                  onChange={(e) => setNewStudent(prev => ({ ...prev, id: e.target.value }))}
-                  className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
-                />
-                <input
-                  type="text"
-                  placeholder="Name"
-                  value={newStudent.name}
-                  onChange={(e) => setNewStudent(prev => ({ ...prev, name: e.target.value }))}
-                  className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
-                />
-                <input
-                  type="text"
-                  placeholder="Grade"
-                  value={newStudent.grade}
-                  onChange={(e) => setNewStudent(prev => ({ ...prev, grade: e.target.value }))}
-                  className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
-                />
-              </div>
-              <button
-                onClick={addStudent}
-                className="w-full flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Add Student
-              </button>
-            </div>
-
-            {/* Students List */}
-            <div className="mt-6">
-              <h3 className="text-lg font-semibold mb-3">Students ({getFilteredStudents().length})</h3>
-              <div className="max-h-64 overflow-y-auto space-y-2">
-                {getFilteredStudents().map(student => {
-                  const masteryPercentage = calculateMasteryPercentage(student.id);
-                  const progress = studentProgress[student.id] || {};
-                  const totalPracticed = Object.keys(progress).length;
-                  const masteredCount = Object.values(progress).filter(fact => fact.mastered).length;
-                  
-                  return (
-                    <div
-                      key={student.id}
-                      onClick={() => setSelectedStudent(student)}
-                      className={`p-3 border rounded-lg cursor-pointer transition-colors ${
-                        selectedStudent?.id === student.id
-                          ? 'border-blue-500 bg-blue-50'
-                          : 'border-gray-300 hover:bg-gray-50'
-                      }`}
-                    >
-                      <div className="font-medium">{student.name}</div>
-                      <div className="text-sm text-gray-500">ID: {student.id} • Grade: {student.grade} • Class: {student.class}</div>
-                      <div className="text-sm font-medium mt-1">
-                        <span className="text-green-600">{masteryPercentage}% mastered</span> 
-                        <span className="text-gray-500 ml-2">({masteredCount}/882 facts)</span>
-                      </div>
-                      <div className="text-xs text-gray-400 mt-1">
-                        {totalPracticed} facts practiced
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-
-          {/* Progress Tracking */}
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            <h2 className="text-2xl font-semibold mb-4 flex items-center">
-              <TrendingUp className="mr-2" />
-              Progress Tracking
-            </h2>
             
-            {selectedStudent ? (
-              <div>
-                <div className="mb-6">
-                  <h3 className="text-xl font-semibold">{selectedStudent.name}'s Progress</h3>
-                  <div className="mt-3 grid grid-cols-3 gap-4">
-                    <div className="bg-green-50 p-4 rounded-lg">
-                      <div className="text-2xl font-bold text-green-600">
-                        {calculateMasteryPercentage(selectedStudent.id)}%
-                      </div>
-                      <div className="text-sm text-green-800">Facts Mastered</div>
-                      <div className="text-xs text-green-600 mt-1">
-                        {Object.values(studentProgress[selectedStudent.id] || {}).filter(fact => fact.mastered).length} of 882 facts
-                      </div>
+            <h3>Add New Student</h3>
+            <input type="text" id="newStudentId" placeholder="Student ID" />
+            <input type="text" id="newStudentName" placeholder="Name" />
+            <input type="text" id="newStudentGrade" placeholder="Grade" />
+            <input type="text" id="newStudentClass" placeholder="Class" />
+            <button class="btn-primary" onclick="addStudent()">Add Student</button>
+            
+            <h3>Students</h3>
+            <div class="student-list" id="studentList"></div>
+            
+            <div id="studentProgress" class="hidden">
+                <h3 id="progressTitle"></h3>
+                <div class="grid">
+                    <div class="card">
+                        <h3>Mastery %</h3>
+                        <div class="number" id="studentMastery">0%</div>
                     </div>
-                    <div className="bg-blue-50 p-4 rounded-lg">
-                      <div className="text-2xl font-bold text-blue-600">
-                        {Object.keys(studentProgress[selectedStudent.id] || {}).length}
-                      </div>
-                      <div className="text-sm text-blue-800">Facts Practiced</div>
-                      <div className="text-xs text-blue-600 mt-1">
-                        {Object.values(studentProgress[selectedStudent.id] || {}).filter(fact => fact.consecutiveCorrect === 1).length} close to mastery
-                      </div>
+                    <div class="card">
+                        <h3>Facts Practiced</h3>
+                        <div class="number" id="factsPracticed">0</div>
                     </div>
-                    <div className="bg-red-50 p-4 rounded-lg">
-                      <div className="text-2xl font-bold text-red-600">
-                        {analyzeStudentMistakes(selectedStudent.id).totalMistakes}
-                      </div>
-                      <div className="text-sm text-red-800">Total Mistakes</div>
-                      <div className="text-xs text-red-600 mt-1">
-                        {analyzeStudentMistakes(selectedStudent.id).recentMistakes.length} recent
-                      </div>
+                    <div class="card">
+                        <h3>Total Mistakes</h3>
+                        <div class="number" id="totalMistakes">0</div>
                     </div>
-                  </div>
                 </div>
+            </div>
+        </div>
+    </div>
 
-                {/* Mistake Analysis Section */}
-                {(() => {
-                  const mistakeAnalysis = analyzeStudentMistakes(selectedStudent.id);
-                  return mistakeAnalysis.totalMistakes > 0 ? (
-                    <div className="mb-6 bg-red-50 p-4 rounded-lg">
-                      <h4 className="font-semibold text-red-800 mb-3">📊 Mistake Analysis</h4>
-                      
-                      <div className="grid grid-cols-2 gap-4 mb-4">
-                        <div>
-                          <h5 className="font-medium text-red-700 mb-2">Error Patterns:</h5>
-                          <ul className="text-sm space-y-1">
-                            <li>• Off by 1: <span className="font-semibold">{mistakeAnalysis.commonPatterns.offByOne}</span> times</li>
-                            <li>• Wrong operation: <span className="font-semibold">{mistakeAnalysis.commonPatterns.signErrors}</span> times</li>
-                            <li>• Large errors (>5): <span className="font-semibold">{mistakeAnalysis.commonPatterns.largeErrors}</span> times</li>
-                            <li>• Negative number issues: <span className="font-semibold">{mistakeAnalysis.commonPatterns.negativeErrors}</span> times</li>
-                          </ul>
-                        </div>
-                        <div>
-                          <h5 className="font-medium text-red-700 mb-2">Operation Breakdown:</h5>
-                          <ul className="text-sm space-y-1">
-                            <li>• Addition mistakes: <span className="font-semibold">{mistakeAnalysis.operationErrors.addition}</span></li>
-                            <li>• Subtraction mistakes: <span className="font-semibold">{mistakeAnalysis.operationErrors.subtraction}</span></li>
-                          </ul>
-                        </div>
-                      </div>
+    <!-- Firebase Scripts -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    
+    <script>
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCdNiW5v8lySfm-f68TUH6QYPpgiZ8UXJw",
+            authDomain: "math-facts-app-v1.firebaseapp.com",
+            projectId: "math-facts-app-v1",
+            storageBucket: "math-facts-app-v1.firebasestorage.app",
+            messagingSenderId: "540842794849",
+            appId: "1:540842794849:web:4700d90ad2f42eff84ef20",
+            measurementId: "G-VBT0RBCZPP"
+        };
 
-                      {mistakeAnalysis.strugglingFacts.length > 0 && (
-                        <div>
-                          <h5 className="font-medium text-red-700 mb-2">Most Missed Facts:</h5>
-                          <div className="flex flex-wrap gap-2">
-                            {mistakeAnalysis.strugglingFacts.map((fact, idx) => (
-                              <span key={idx} className="bg-red-100 text-red-800 px-2 py-1 rounded text-sm">
-                                {fact.fact.replace('+', ' + ').replace('-', ' - ')} 
-                                <span className="ml-1 text-red-600">({fact.mistakeCount} errors, {fact.accuracy}% accuracy)</span>
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      )}
+        // Global variables
+        let db = null;
+        let currentUser = null;
+        let currentProblem = null;
+        let score = { correct: 0, total: 0 };
+        let students = [
+            { id: '001', name: 'Alice Johnson', grade: '3', class: 'Math-3A' },
+            { id: '002', name: 'Bob Smith', grade: '3', class: 'Math-3A' },
+            { id: '003', name: 'Carol Davis', grade: '4', class: 'Math-4B' },
+            { id: '004', name: 'David Brown', grade: '3', class: 'Math-3B' },
+            { id: '005', name: 'Emma Wilson', grade: '4', class: 'Math-4B' }
+        ];
+        let studentProgress = {};
 
-                      {mistakeAnalysis.recentMistakes.length > 0 && (
-                        <div className="mt-4">
-                          <h5 className="font-medium text-red-700 mb-2">Recent Mistakes:</h5>
-                          <div className="max-h-32 overflow-y-auto space-y-2">
-                            {mistakeAnalysis.recentMistakes.slice(0, 5).map((mistake, idx) => (
-                              <div key={idx} className="bg-white p-2 rounded border border-red-200 text-sm">
-                                <span className="font-medium">{mistake.problem} = ?</span>
-                                <span className="text-red-600 ml-2">
-                                  Answered: {mistake.studentAnswer} (Correct: {mistake.correctAnswer})
-                                </span>
-                                <div className="text-xs text-gray-500">
-                                  {new Date(mistake.timestamp).toLocaleString()}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ) : null;
-                })()}
+        // Initialize Firebase
+        function initFirebase() {
+            try {
+                firebase.initializeApp(firebaseConfig);
+                db = firebase.firestore();
+                updateStatus('connected', '✅ Connected to Firebase database');
+                console.log('Firebase initialized successfully');
+                loadStudents();
+            } catch (error) {
+                console.error('Firebase initialization error:', error);
+                updateStatus('local', '⚠️ Running in local mode');
+            }
+        }
+
+        // Update status indicator
+        function updateStatus(type, message) {
+            const statusEl = document.getElementById('status');
+            statusEl.className = `status ${type}`;
+            statusEl.textContent = message;
+        }
+
+        // Load students from Firebase or use local data
+        async function loadStudents() {
+            if (!db) return;
+            
+            try {
+                const snapshot = await db.collection('students').get();
+                if (!snapshot.empty) {
+                    students = snapshot.docs.map(doc => doc.data());
+                } else {
+                    // Initialize with sample data
+                    for (const student of students) {
+                        await db.collection('students').doc(student.id).set(student);
+                    }
+                }
+                updateStudentList();
+            } catch (error) {
+                console.error('Error loading students:', error);
+            }
+        }
+
+        // Generate random math problem
+        function generateProblem() {
+            const num1 = Math.floor(Math.random() * 21) - 10; // -10 to 10
+            const num2 = Math.floor(Math.random() * 21) - 10;
+            const operation = Math.random() < 0.5 ? '+' : '-';
+            const answer = operation === '+' ? num1 + num2 : num1 - num2;
+            
+            return {
+                num1,
+                num2,
+                operation,
+                answer,
+                key: `${num1}${operation}${num2}`,
+                display: `${num1} ${operation} ${num2} = ?`
+            };
+        }
+
+        // Student login
+        function studentLogin() {
+            const studentId = document.getElementById('studentId').value.trim();
+            const student = students.find(s => s.id === studentId);
+            
+            if (student) {
+                currentUser = student;
+                score = { correct: 0, total: 0 };
+                showScreen('practiceScreen');
+                document.getElementById('studentWelcome').textContent = `Welcome, ${student.name}!`;
+                updateScore();
+                nextProblem();
+            } else {
+                alert('Student ID not found!');
+            }
+        }
+
+        // Generate next problem
+        function nextProblem() {
+            currentProblem = generateProblem();
+            document.getElementById('problem').textContent = currentProblem.display;
+            document.getElementById('answer').value = '';
+            document.getElementById('answer').focus();
+            hideFeedback();
+        }
+
+        // Submit answer
+        function submitAnswer() {
+            const userAnswer = parseInt(document.getElementById('answer').value);
+            if (isNaN(userAnswer)) return;
+
+            const isCorrect = userAnswer === currentProblem.answer;
+            score.total++;
+            if (isCorrect) score.correct++;
+            
+            updateScore();
+            showFeedback(isCorrect, currentProblem.answer);
+            
+            // Save progress to Firebase
+            if (db && currentUser) {
+                saveProgress(currentUser.id, currentProblem, isCorrect, userAnswer);
+            }
+            
+            setTimeout(() => {
+                nextProblem();
+            }, 2000);
+        }
+
+        // Save student progress
+        async function saveProgress(studentId, problem, isCorrect, userAnswer) {
+            try {
+                const progressRef = db.collection('progress').doc(studentId);
+                const doc = await progressRef.get();
+                let data = doc.exists ? doc.data() : {};
                 
-                {/* Visual Fact Mastery Grid */}
-                <div className="mb-6">
-                  <h4 className="font-semibold text-gray-700 mb-3 flex items-center justify-between">
-                    📊 Fact Mastery Grid
-                    <div className="text-xs flex items-center gap-4">
-                      <span className="flex items-center gap-1">
-                        <div className="w-3 h-3 bg-green-500 rounded"></div>
-                        Mastered
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <div className="w-3 h-3 bg-yellow-400 rounded"></div>
-                        Practicing
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <div className="w-3 h-3 bg-red-500 rounded"></div>
-                        Has Errors
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <div className="w-3 h-3 bg-gray-200 rounded border"></div>
-                        Not Seen
-                      </span>
-                    </div>
-                  </h4>
-                  
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    {/* Addition Facts */}
-                    <div className="mb-6">
-                      <h5 className="text-sm font-medium text-gray-700 mb-2">Addition Facts (0+0 to 10+10)</h5>
-                      <div className="grid grid-cols-11 gap-1">
-                        {Array.from({length: 11}, (_, i) => (
-                          <div key={`add-row-${i}`} className="contents">
-                            {Array.from({length: 11}, (_, j) => {
-                              const factKey = `${i}+${j}`;
-                              const status = getFactStatus(factKey, selectedStudent.id);
-                              const progress = studentProgress[selectedStudent.id]?.[factKey];
-                              
-                              const statusColors = {
-                                mastered: 'bg-green-500 text-white',
-                                practicing: 'bg-yellow-400 text-black',
-                                incorrect: 'bg-red-500 text-white',
-                                unseen: 'bg-gray-200 text-gray-600 border border-gray-300'
-                              };
-                              
-                              return (
-                                <div
-                                  key={factKey}
-                                  className={`w-8 h-8 text-xs font-medium flex items-center justify-center rounded cursor-help ${statusColors[status]}`}
-                                  title={`${i}+${j}=${i+j}${progress ? ` (${progress.correct}/${progress.attempts} correct)` : ' (not practiced)'}`}
-                                >
-                                  {i+j}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
+                if (!data[problem.key]) {
+                    data[problem.key] = {
+                        attempts: 0,
+                        correct: 0,
+                        consecutiveCorrect: 0,
+                        mastered: false,
+                        mistakes: []
+                    };
+                }
+                
+                const factData = data[problem.key];
+                factData.attempts++;
+                if (isCorrect) {
+                    factData.correct++;
+                    factData.consecutiveCorrect++;
+                    if (factData.consecutiveCorrect >= 2) {
+                        factData.mastered = true;
+                    }
+                } else {
+                    factData.consecutiveCorrect = 0;
+                    factData.mistakes.push({
+                        studentAnswer: userAnswer,
+                        correctAnswer: problem.answer,
+                        timestamp: new Date().toISOString()
+                    });
+                }
+                
+                await progressRef.set(data);
+            } catch (error) {
+                console.error('Error saving progress:', error);
+            }
+        }
+
+        // Update score display
+        function updateScore() {
+            document.getElementById('studentScore').textContent = `Score: ${score.correct}/${score.total}`;
+        }
+
+        // Show feedback
+        function showFeedback(isCorrect, correctAnswer) {
+            const feedbackEl = document.getElementById('feedback');
+            feedbackEl.className = `feedback ${isCorrect ? 'correct' : 'incorrect'}`;
+            feedbackEl.textContent = isCorrect ? 'Correct! 🎉' : `Not quite! The answer is ${correctAnswer}`;
+            feedbackEl.classList.remove('hidden');
+        }
+
+        // Hide feedback
+        function hideFeedback() {
+            document.getElementById('feedback').classList.add('hidden');
+        }
+
+        // Show teacher dashboard
+        function showTeacherDashboard() {
+            showScreen('teacherScreen');
+            updateStudentList();
+            updateDashboardStats();
+        }
+
+        // Add new student
+        async function addStudent() {
+            const id = document.getElementById('newStudentId').value.trim();
+            const name = document.getElementById('newStudentName').value.trim();
+            const grade = document.getElementById('newStudentGrade').value.trim();
+            const className = document.getElementById('newStudentClass').value.trim();
+            
+            if (id && name && grade) {
+                const student = { id, name, grade, class: className || 'Unassigned' };
+                students.push(student);
+                
+                if (db) {
+                    try {
+                        await db.collection('students').doc(id).set(student);
+                    } catch (error) {
+                        console.error('Error adding student:', error);
+                    }
+                }
+                
+                // Clear form
+                document.getElementById('newStudentId').value = '';
+                document.getElementById('newStudentName').value = '';
+                document.getElementById('newStudentGrade').value = '';
+                document.getElementById('newStudentClass').value = '';
+                
+                updateStudentList();
+                updateDashboardStats();
+            }
+        }
+
+        // Update student list
+        function updateStudentList() {
+            const listEl = document.getElementById('studentList');
+            listEl.innerHTML = '';
+            
+            students.forEach(student => {
+                const div = document.createElement('div');
+                div.className = 'student-item';
+                div.innerHTML = `
+                    <strong>${student.name}</strong><br>
+                    ID: ${student.id} • Grade: ${student.grade} • Class: ${student.class}
+                `;
+                div.onclick = () => showStudentProgress(student);
+                listEl.appendChild(div);
+            });
+        }
+
+        // Show student progress
+        async function showStudentProgress(student) {
+            document.getElementById('progressTitle').textContent = `${student.name}'s Progress`;
+            document.getElementById('studentProgress').classList.remove('hidden');
+            
+            // Clear previous selection
+            document.querySelectorAll('.student-item').forEach(item => {
+                item.classList.remove('selected');
+            });
+            
+            // Highlight selected student
+            event.target.classList.add('selected');
+            
+            if (db) {
+                try {
+                    const doc = await db.collection('progress').doc(student.id).get();
+                    const progress = doc.exists ? doc.data() : {};
                     
-                    {/* Subtraction Facts */}
-                    <div>
-                      <h5 className="text-sm font-medium text-gray-700 mb-2">Subtraction Facts (0-(-10) to 10-10)</h5>
-                      <div className="grid grid-cols-21 gap-1 text-xs">
-                        {Array.from({length: 11}, (_, i) => (
-                          <div key={`sub-row-${i}`} className="contents">
-                            {Array.from({length: 21}, (_, j) => {
-                              const subtrahend = j - 10; // -10 to 10
-                              const factKey = `${i}-${subtrahend}`;
-                              const status = getFactStatus(factKey, selectedStudent.id);
-                              const progress = studentProgress[selectedStudent.id]?.[factKey];
-                              const answer = i - subtrahend;
-                              
-                              const statusColors = {
-                                mastered: 'bg-green-500 text-white',
-                                practicing: 'bg-yellow-400 text-black',
-                                incorrect: 'bg-red-500 text-white',
-                                unseen: 'bg-gray-200 text-gray-600 border border-gray-300'
-                              };
-                              
-                              return (
-                                <div
-                                  key={factKey}
-                                  className={`w-6 h-6 text-xs font-medium flex items-center justify-center rounded cursor-help ${statusColors[status]}`}
-                                  title={`${i}-${subtrahend}=${answer}${progress ? ` (${progress.correct}/${progress.attempts} correct)` : ' (not practiced)'}`}
-                                >
-                                  {answer}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                    const masteredCount = Object.values(progress).filter(fact => fact && fact.mastered).length;
+                    const totalFacts = Object.keys(progress).length;
+                    const totalMistakes = Object.values(progress).reduce((sum, fact) => {
+                        return sum + (fact && fact.mistakes ? fact.mistakes.length : 0);
+                    }, 0);
+                    
+                    document.getElementById('studentMastery').textContent = 
+                        totalFacts > 0 ? `${((masteredCount / 882) * 100).toFixed(1)}%` : '0%';
+                    document.getElementById('factsPracticed').textContent = totalFacts;
+                    document.getElementById('totalMistakes').textContent = totalMistakes;
+                } catch (error) {
+                    console.error('Error loading student progress:', error);
+                }
+            }
+        }
 
-                <div className="space-y-3 max-h-64 overflow-y-auto">
-                  <h4 className="font-medium text-gray-700 sticky top-0 bg-white pb-2">Individual Fact Details</h4>
-                  {Object.entries(studentProgress[selectedStudent.id] || {}).length > 0 ? (
-                    Object.entries(studentProgress[selectedStudent.id])
-                      .sort(([,a], [,b]) => {
-                        // Sort by mastery status, then by consecutive correct
-                        if (a.mastered !== b.mastered) return b.mastered - a.mastered;
-                        return b.consecutiveCorrect - a.consecutiveCorrect;
-                      })
-                      .map(([factKey, progress]) => {
-                        const status = getMasteryStatus(progress);
-                        const statusColors = {
-                          mastered: 'bg-green-100 text-green-800 border-green-200',
-                          close: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-                          practicing: 'bg-blue-100 text-blue-800 border-blue-200',
-                          new: 'bg-gray-100 text-gray-800 border-gray-200'
-                        };
-                        
-                        return (
-                          <div key={factKey} className={`p-3 rounded-lg border ${statusColors[status]}`}>
-                            <div className="flex justify-between items-start">
-                              <div>
-                                <span className="font-medium text-lg">
-                                  {factKey.replace('+', ' + ').replace('-', ' - ')} = ?
-                                </span>
-                                <div className="text-sm mt-1">
-                                  {progress.mastered ? (
-                                    <span className="font-medium">✓ MASTERED</span>
-                                  ) : progress.consecutiveCorrect === 1 ? (
-                                    <span className="font-medium">1 in a row - Close to mastery!</span>
-                                  ) : (
-                                    <span>Needs {2 - progress.consecutiveCorrect} more in a row</span>
-                                  )}
-                                </div>
-                              </div>
-                              <div className="text-right">
-                                <div className="text-sm font-medium">
-                                  {progress.correct}/{progress.attempts} correct
-                                </div>
-                                <div className="text-xs mt-1">
-                                  {progress.history && progress.history.length > 0 && (
-                                    <div className="flex gap-1">
-                                      <span className="text-gray-500">Recent: </span>
-                                      {progress.history.slice(-3).map((correct, idx) => (
-                                        <span key={idx} className={correct ? 'text-green-600' : 'text-red-600'}>
-                                          {correct ? '✓' : '✗'}
-                                        </span>
-                                      ))}
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })
-                  ) : (
-                    <p className="text-gray-500 italic">No practice data yet</p>
-                  )}
-                </div>
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <TrendingUp className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-500 italic">Select a student to view their progress</p>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
+        // Update dashboard stats
+        function updateDashboardStats() {
+            document.getElementById('totalStudents').textContent = students.length;
+            // Add more stats calculations here
+        }
 
-const StudentLogin = ({ onLogin, disabled }) => {
-  const [studentId, setStudentId] = useState('');
+        // Show specific screen
+        function showScreen(screenId) {
+            document.getElementById('loginScreen').classList.add('hidden');
+            document.getElementById('practiceScreen').classList.add('hidden');
+            document.getElementById('teacherScreen').classList.add('hidden');
+            document.getElementById(screenId).classList.remove('hidden');
+        }
 
-  const handleSubmit = () => {
-    if (studentId.trim() && !disabled) {
-      onLogin(studentId.trim());
-    }
-  };
+        // Logout
+        function logout() {
+            currentUser = null;
+            currentProblem = null;
+            score = { correct: 0, total: 0 };
+            showScreen('loginScreen');
+            document.getElementById('studentProgress').classList.add('hidden');
+        }
 
-  const handleKeyPress = (e) => {
-    if (e.key === 'Enter') {
-      handleSubmit();
-    }
-  };
+        // Allow Enter key to submit
+        document.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                if (!document.getElementById('practiceScreen').classList.contains('hidden')) {
+                    submitAnswer();
+                } else if (!document.getElementById('loginScreen').classList.contains('hidden')) {
+                    studentLogin();
+                }
+            }
+        });
 
-  return (
-    <div className="space-y-4">
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Student ID Number
-        </label>
-        <input
-          type="text"
-          value={studentId}
-          onChange={(e) => setStudentId(e.target.value)}
-          onKeyPress={handleKeyPress}
-          disabled={disabled}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
-          placeholder="Enter your ID number"
-        />
-      </div>
-      <button
-        onClick={handleSubmit}
-        disabled={disabled}
-        className="w-full flex items-center justify-center px-4 py-3 border border-transparent rounded-md shadow-sm text-base font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-gray-400 disabled:cursor-not-allowed"
-      >
-        <BookOpen className="mr-2 h-5 w-5" />
-        Start Practice
-      </button>
-    </div>
-  );
-};
-
-export default MathFactsTracker;
+        // Initialize app
+        window.addEventListener('load', function() {
+            console.log('App loaded, waiting for Firebase...');
+            
+            // Wait a bit for Firebase scripts to load
+            setTimeout(() => {
+                initFirebase();
+            }, 1000);
+            
+            // Also try initializing immediately
+            initFirebase();
+        });
+    </script>
+</body>
+</html>
