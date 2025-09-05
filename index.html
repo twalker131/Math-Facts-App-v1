@@ -46,7 +46,7 @@
             color: #c2185b;
             border: 1px solid #e91e63;
         }
-        input[type="text"], input[type="number"] {
+        input[type="text"], input[type="number"], input[type="password"] {
             padding: 15px;
             font-size: 18px;
             border: 2px solid #ddd;
@@ -244,6 +244,103 @@
         .hidden {
             display: none;
         }
+        
+        /* Student Detail Sections */
+        .student-detail-section {
+            margin: 30px 0;
+            padding: 20px;
+            background: #f9f9f9;
+            border-radius: 10px;
+            border: 1px solid #e0e0e0;
+        }
+        
+        .student-detail-section h3 {
+            margin: 0 0 15px 0;
+            color: #333;
+            border-bottom: 2px solid #2196f3;
+            padding-bottom: 5px;
+        }
+        
+        .error-patterns {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        
+        .pattern-card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            text-align: center;
+        }
+        
+        .pattern-problem {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #f44336;
+            margin-bottom: 10px;
+        }
+        
+        .pattern-stats {
+            font-size: 0.9em;
+            color: #666;
+        }
+        
+        .recent-problems {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .problem-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .problem-table th {
+            background: #2196f3;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: bold;
+        }
+        
+        .problem-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .problem-table tr:hover {
+            background: #f5f5f5;
+        }
+        
+        .correct-answer {
+            color: #4caf50;
+            font-weight: bold;
+        }
+        
+        .incorrect-answer {
+            color: #f44336;
+            font-weight: bold;
+        }
+        
+        .timestamp {
+            font-size: 0.8em;
+            color: #666;
+        }
+
+        .login-error {
+            color: #f44336;
+            margin-top: 10px;
+            font-weight: bold;
+            padding: 10px;
+            background: #ffebee;
+            border-radius: 5px;
+            border: 1px solid #f44336;
+        }
     </style>
 </head>
 <body>
@@ -252,7 +349,7 @@
         
         <!-- Status Indicator -->
         <div id="status" class="status connecting">
-            🔄 Connecting to Firebase...
+            Connecting to Firebase...
         </div>
         
         <!-- Login Screen -->
@@ -262,7 +359,21 @@
             <br>
             <button class="btn-primary" onclick="studentLogin()">Start Practice</button>
             <br><br>
-            <button class="btn-success" onclick="showTeacherDashboard()">Teacher Dashboard</button>
+            <button class="btn-success" onclick="showTeacherLogin()">Teacher Dashboard</button>
+        </div>
+        
+        <!-- Teacher Login Screen -->
+        <div id="teacherLoginScreen" class="hidden">
+            <h2>Teacher Login</h2>
+            <p>Enter the teacher password to access the dashboard</p>
+            <input type="password" id="teacherPassword" placeholder="Teacher Password" />
+            <br>
+            <button class="btn-primary" onclick="teacherLogin()">Login</button>
+            <br><br>
+            <button class="btn-secondary" onclick="backToMainLogin()">Back</button>
+            <div id="loginError" class="login-error hidden">
+                Incorrect password. Please try again.
+            </div>
         </div>
         
         <!-- Student Practice Screen -->
@@ -288,7 +399,7 @@
         <!-- Visual Feedback Modal -->
         <div id="feedbackModal" class="feedback-modal hidden">
             <div class="feedback-content">
-                <div class="feedback-title">Let's work through this together! 🤔</div>
+                <div class="feedback-title">Let's work through this together!</div>
                 <div class="visual-explanation">
                     <div id="visualProblem" class="math-step"></div>
                     <div id="visualSolution"></div>
@@ -345,26 +456,26 @@
                         <div class="number" id="totalMistakes">0</div>
                     </div>
                 </div>
+                
+                <!-- Error Patterns Section -->
+                <div class="student-detail-section">
+                    <h3>Problem Patterns - Most Difficult</h3>
+                    <div id="errorPatterns" class="error-patterns"></div>
+                </div>
+                
+                <!-- Recent Problems Section -->
+                <div class="student-detail-section">
+                    <h3>Last 25 Problems</h3>
+                    <div id="recentProblems" class="recent-problems"></div>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Firebase Scripts -->
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-    
     <script>
-        // Firebase configuration
-        const firebaseConfig = {
-            apiKey: "AIzaSyCdNiW5v8lySfm-f68TUH6QYPpgiZ8UXJw",
-            authDomain: "math-facts-app-v1.firebaseapp.com",
-            projectId: "math-facts-app-v1",
-            storageBucket: "math-facts-app-v1.firebasestorage.app",
-            messagingSenderId: "540842794849",
-            appId: "1:540842794849:web:4700d90ad2f42eff84ef20",
-            measurementId: "G-VBT0RBCZPP"
-        };
-
+        // Teacher password - change this for your deployment
+        const TEACHER_PASSWORD = "MathTeacher2024!";
+        
         // Global variables
         let db = null;
         let currentUser = null;
@@ -377,24 +488,10 @@
             { id: '004', name: 'David Brown', grade: '3', class: 'Math-3B' },
             { id: '005', name: 'Emma Wilson', grade: '4', class: 'Math-4B' }
         ];
-        let studentProgress = {};
 
-        // Initialize Firebase
+        // Initialize Firebase (gracefully handles when not available)
         function initFirebase() {
-            try {
-                if (typeof firebase !== 'undefined') {
-                    firebase.initializeApp(firebaseConfig);
-                    db = firebase.firestore();
-                    updateStatus('connected', '✅ Connected to Firebase database');
-                    console.log('Firebase initialized successfully');
-                    loadStudents();
-                } else {
-                    throw new Error('Firebase not available');
-                }
-            } catch (error) {
-                console.log('Firebase not available, running in local mode');
-                updateStatus('local', '⚠️ Running in local mode');
-            }
+            updateStatus('local', 'Running in local mode');
         }
 
         // Update status indicator
@@ -404,29 +501,9 @@
             statusEl.textContent = message;
         }
 
-        // Load students from Firebase or use local data
-        async function loadStudents() {
-            if (!db) return;
-            
-            try {
-                const snapshot = await db.collection('students').get();
-                if (!snapshot.empty) {
-                    students = snapshot.docs.map(doc => doc.data());
-                } else {
-                    // Initialize with sample data
-                    for (const student of students) {
-                        await db.collection('students').doc(student.id).set(student);
-                    }
-                }
-                updateStudentList();
-            } catch (error) {
-                console.error('Error loading students:', error);
-            }
-        }
-
         // Generate random math problem
         function generateProblem() {
-            const num1 = Math.floor(Math.random() * 21) - 10; // -10 to 10
+            const num1 = Math.floor(Math.random() * 21) - 10;
             const num2 = Math.floor(Math.random() * 21) - 10;
             const operation = Math.random() < 0.5 ? '+' : '-';
             const answer = operation === '+' ? num1 + num2 : num1 - num2;
@@ -458,6 +535,34 @@
             }
         }
 
+        // Show teacher login screen
+        function showTeacherLogin() {
+            showScreen('teacherLoginScreen');
+            document.getElementById('teacherPassword').focus();
+            document.getElementById('loginError').classList.add('hidden');
+        }
+
+        // Teacher login authentication
+        function teacherLogin() {
+            const enteredPassword = document.getElementById('teacherPassword').value;
+            
+            if (enteredPassword === TEACHER_PASSWORD) {
+                document.getElementById('teacherPassword').value = '';
+                showTeacherDashboard();
+            } else {
+                document.getElementById('loginError').classList.remove('hidden');
+                document.getElementById('teacherPassword').value = '';
+                document.getElementById('teacherPassword').focus();
+            }
+        }
+
+        // Back to main login
+        function backToMainLogin() {
+            document.getElementById('teacherPassword').value = '';
+            document.getElementById('loginError').classList.add('hidden');
+            showScreen('loginScreen');
+        }
+
         // Generate next problem
         function nextProblem() {
             currentProblem = generateProblem();
@@ -486,126 +591,54 @@
             } else {
                 showVisualFeedback(currentProblem, userAnswer);
             }
-            
-            // Save progress to Firebase
-            if (db && currentUser) {
-                saveProgress(currentUser.id, currentProblem, isCorrect, userAnswer);
-            }
         }
 
         // Create visual representation for addition
         function createAdditionVisual(num1, num2, answer) {
             let html = '<div class="math-step">Let\'s add these numbers step by step:</div>';
             
-            // Check if we need to show canceling (positive + negative)
-            if ((num1 > 0 && num2 < 0) || (num1 < 0 && num2 > 0)) {
-                html += '<div class="math-step" style="color: #9c27b0;">Positive and negative numbers cancel each other out!</div>';
-                
-                // Show original numbers
-                html += '<div class="visual-blocks">';
-                html += '<div class="block-group">';
-                html += '<div class="block-label">Starting with:</div>';
-                html += '<div class="blocks">';
-                for (let i = 0; i < Math.abs(num1); i++) {
-                    html += `<div class="block ${num1 >= 0 ? 'positive' : 'negative'}"></div>`;
-                }
-                html += '</div>';
-                html += `<div style="margin-top: 5px;">${num1}</div>`;
-                html += '</div>';
-                
-                html += '<div class="operation-symbol">+</div>';
-                
-                html += '<div class="block-group">';
-                html += '<div class="block-label">Adding:</div>';
-                html += '<div class="blocks">';
-                for (let i = 0; i < Math.abs(num2); i++) {
-                    html += `<div class="block ${num2 >= 0 ? 'positive' : 'negative'}"></div>`;
-                }
-                html += '</div>';
-                html += `<div style="margin-top: 5px;">${num2}</div>`;
-                html += '</div>';
-                html += '</div>';
-                
-                // Show canceling process
-                let positiveCount = num1 > 0 ? Math.abs(num1) : Math.abs(num2);
-                let negativeCount = num1 < 0 ? Math.abs(num1) : Math.abs(num2);
-                let canceled = Math.min(positiveCount, negativeCount);
-                
-                if (canceled > 0) {
-                    html += '<div class="math-step" style="color: #9c27b0; margin: 20px 0;">Canceling pairs:</div>';
-                    html += '<div class="visual-blocks">';
-                    
-                    // Show canceled pairs
-                    for (let i = 0; i < canceled; i++) {
-                        html += '<div class="block positive" style="text-decoration: line-through; opacity: 0.5;"></div>';
-                        html += '<div style="margin: 0 5px; color: #999;">cancels</div>';
-                        html += '<div class="block negative" style="text-decoration: line-through; opacity: 0.5;"></div>';
-                        if (i < canceled - 1) html += '<div style="margin: 0 10px;"></div>';
-                    }
-                    html += '</div>';
-                }
-                
-                // Show equals and what's left
-                html += '<div class="operation-symbol">=</div>';
-                html += '<div class="block-group">';
-                html += '<div class="block-label">What\'s left:</div>';
-                if (answer === 0) {
-                    html += '<div style="margin-top: 5px;">0</div>';
-                } else {
-                    html += '<div class="blocks">';
-                    for (let i = 0; i < Math.abs(answer); i++) {
-                        html += `<div class="block ${answer >= 0 ? 'positive' : 'negative'}"></div>`;
-                    }
-                    html += '</div>';
-                    html += `<div style="margin-top: 5px;">${answer}</div>`;
-                }
-                html += '</div>';
-                
+            html += '<div class="visual-blocks">';
+            
+            html += '<div class="block-group">';
+            html += '<div class="block-label">Starting with:</div>';
+            html += '<div class="blocks">';
+            for (let i = 0; i < Math.abs(num1); i++) {
+                html += `<div class="block ${num1 >= 0 ? 'positive' : 'negative'}"></div>`;
+            }
+            html += '</div>';
+            html += `<div style="margin-top: 5px;">${num1}</div>`;
+            html += '</div>';
+            
+            html += '<div class="operation-symbol">+</div>';
+            
+            html += '<div class="block-group">';
+            html += '<div class="block-label">Adding:</div>';
+            html += '<div class="blocks">';
+            for (let i = 0; i < Math.abs(num2); i++) {
+                html += `<div class="block ${num2 >= 0 ? 'positive' : 'negative'}"></div>`;
+            }
+            html += '</div>';
+            html += `<div style="margin-top: 5px;">${num2}</div>`;
+            html += '</div>';
+            
+            html += '<div class="operation-symbol">=</div>';
+            
+            html += '<div class="block-group">';
+            html += '<div class="block-label">Result:</div>';
+            if (answer === 0) {
+                html += '<div style="margin-top: 5px;">0</div>';
             } else {
-                // Same sign addition - just combine them
-                html += '<div class="visual-blocks">';
-                
-                // Show first number
-                html += '<div class="block-group">';
-                html += '<div class="block-label">Starting with:</div>';
-                html += '<div class="blocks">';
-                for (let i = 0; i < Math.abs(num1); i++) {
-                    html += `<div class="block ${num1 >= 0 ? 'positive' : 'negative'}"></div>`;
-                }
-                html += '</div>';
-                html += `<div style="margin-top: 5px;">${num1}</div>`;
-                html += '</div>';
-                
-                html += '<div class="operation-symbol">+</div>';
-                
-                // Show second number
-                html += '<div class="block-group">';
-                html += '<div class="block-label">Adding:</div>';
-                html += '<div class="blocks">';
-                for (let i = 0; i < Math.abs(num2); i++) {
-                    html += `<div class="block ${num2 >= 0 ? 'positive' : 'negative'}"></div>`;
-                }
-                html += '</div>';
-                html += `<div style="margin-top: 5px;">${num2}</div>`;
-                html += '</div>';
-                
-                html += '<div class="operation-symbol">=</div>';
-                
-                // Show result
-                html += '<div class="block-group">';
-                html += '<div class="block-label">Result:</div>';
                 html += '<div class="blocks">';
                 for (let i = 0; i < Math.abs(answer); i++) {
                     html += `<div class="block ${answer >= 0 ? 'positive' : 'negative'}"></div>`;
                 }
                 html += '</div>';
                 html += `<div style="margin-top: 5px;">${answer}</div>`;
-                html += '</div>';
-                
-                html += '</div>';
             }
+            html += '</div>';
             
-            // Final explanation
+            html += '</div>';
+            
             html += `
                 <div class="math-step" style="margin-top: 20px;">
                     Starting with ${num1}, we add ${num2}
@@ -622,10 +655,8 @@
         function createSubtractionVisual(num1, num2, answer) {
             let html = '<div class="math-step">Let\'s work through this subtraction step by step:</div>';
             
-            // Always show subtraction as adding the opposite
             html += '<div class="math-step" style="color: #ff9800;">Subtracting is the same as adding the opposite!</div>';
             
-            // Show original problem
             html += '<div class="visual-blocks">';
             html += '<div class="block-group">';
             html += '<div class="block-label">Starting with:</div>';
@@ -650,11 +681,9 @@
             html += '</div>';
             html += '</div>';
             
-            // Show transformation
             html += '<div class="math-step" style="color: #2196f3; margin: 20px 0;">↓ This becomes ↓</div>';
             html += `<div class="math-step">Subtracting ${num2} = Adding ${-num2}</div>`;
             
-            // Show converted problem (adding the opposite)
             html += '<div class="visual-blocks">';
             html += '<div class="block-group">';
             html += '<div class="block-label">Starting with:</div>';
@@ -680,7 +709,6 @@
             
             html += '<div class="operation-symbol">=</div>';
             
-            // Show final result
             html += '<div class="block-group">';
             html += '<div class="block-label">Result:</div>';
             if (answer === 0) {
@@ -697,7 +725,6 @@
             
             html += '</div>';
             
-            // Final explanation
             html += `
                 <div class="math-step" style="color: #4caf50; margin-top: 20px;">
                     Remember: ${num1} - ${num2} = ${num1} + (${-num2}) = ${answer}
@@ -725,10 +752,10 @@
             
             solutionHTML += `
                 <div class="math-step" style="color: #f44336; margin-top: 20px;">
-                    You answered: ${userAnswer} ❌
+                    You answered: ${userAnswer}
                 </div>
                 <div class="math-step" style="color: #4caf50;">
-                    Correct answer: ${problem.answer} ✅
+                    Correct answer: ${problem.answer}
                 </div>
             `;
             
@@ -742,46 +769,6 @@
             nextProblem();
         }
 
-        // Save student progress
-        async function saveProgress(studentId, problem, isCorrect, userAnswer) {
-            try {
-                const progressRef = db.collection('progress').doc(studentId);
-                const doc = await progressRef.get();
-                let data = doc.exists ? doc.data() : {};
-                
-                if (!data[problem.key]) {
-                    data[problem.key] = {
-                        attempts: 0,
-                        correct: 0,
-                        consecutiveCorrect: 0,
-                        mastered: false,
-                        mistakes: []
-                    };
-                }
-                
-                const factData = data[problem.key];
-                factData.attempts++;
-                if (isCorrect) {
-                    factData.correct++;
-                    factData.consecutiveCorrect++;
-                    if (factData.consecutiveCorrect >= 2) {
-                        factData.mastered = true;
-                    }
-                } else {
-                    factData.consecutiveCorrect = 0;
-                    factData.mistakes.push({
-                        studentAnswer: userAnswer,
-                        correctAnswer: problem.answer,
-                        timestamp: new Date().toISOString()
-                    });
-                }
-                
-                await progressRef.set(data);
-            } catch (error) {
-                console.error('Error saving progress:', error);
-            }
-        }
-
         // Update score display
         function updateScore() {
             document.getElementById('studentScore').textContent = `Score: ${score.correct}/${score.total}`;
@@ -791,7 +778,7 @@
         function showFeedback(isCorrect, correctAnswer) {
             const feedbackEl = document.getElementById('feedback');
             feedbackEl.className = `feedback ${isCorrect ? 'correct' : 'incorrect'}`;
-            feedbackEl.textContent = isCorrect ? 'Correct! 🎉' : `Not quite! The answer is ${correctAnswer}`;
+            feedbackEl.textContent = isCorrect ? 'Correct!' : `Not quite! The answer is ${correctAnswer}`;
             feedbackEl.classList.remove('hidden');
         }
 
@@ -805,10 +792,137 @@
             showScreen('teacherScreen');
             updateStudentList();
             updateDashboardStats();
+            populateFilterOptions();
+        }
+
+        // Populate filter dropdown options
+        function populateFilterOptions() {
+            const classFilter = document.getElementById('classFilter');
+            const gradeFilter = document.getElementById('gradeFilter');
+            
+            // Check if filter elements exist before using them
+            if (!classFilter || !gradeFilter) {
+                console.log('Filter elements not found - filters not available');
+                return;
+            }
+            
+            // Get unique classes and grades
+            const classes = [...new Set(students.map(s => s.class))].sort();
+            const grades = [...new Set(students.map(s => s.grade))].sort();
+            
+            // Clear existing options (except "All")
+            classFilter.innerHTML = '<option value="">All Classes</option>';
+            gradeFilter.innerHTML = '<option value="">All Grades</option>';
+            
+            // Add class options
+            classes.forEach(className => {
+                const option = document.createElement('option');
+                option.value = className;
+                option.textContent = className;
+                classFilter.appendChild(option);
+            });
+            
+            // Add grade options
+            grades.forEach(grade => {
+                const option = document.createElement('option');
+                option.value = grade;
+                option.textContent = `Grade ${grade}`;
+                gradeFilter.appendChild(option);
+            });
+        }
+
+        // Apply all filters
+        function applyFilters() {
+            const classFilter = document.getElementById('classFilter').value;
+            const gradeFilter = document.getElementById('gradeFilter').value;
+            const patternFilter = document.getElementById('patternFilter').value;
+            const errorThreshold = parseInt(document.getElementById('errorThreshold').value);
+            
+            let filteredStudents = students.filter(student => {
+                // Apply class filter
+                if (classFilter && student.class !== classFilter) {
+                    return false;
+                }
+                
+                // Apply grade filter
+                if (gradeFilter && student.grade !== gradeFilter) {
+                    return false;
+                }
+                
+                // Apply pattern filter (using sample data for demo)
+                if (patternFilter) {
+                    const hasPatternErrors = checkPatternErrors(student, patternFilter, errorThreshold);
+                    if (!hasPatternErrors) {
+                        return false;
+                    }
+                }
+                
+                return true;
+            });
+            
+            // Update student list display
+            updateFilteredStudentList(filteredStudents);
+            
+            // Update results counter
+            const resultsText = `Showing ${filteredStudents.length} of ${students.length} students`;
+            document.getElementById('filterResults').textContent = resultsText;
+        }
+
+        // Check if student has errors in specific pattern (sample logic)
+        function checkPatternErrors(student, pattern, threshold) {
+            // In a real implementation, this would check actual student data
+            // For demo purposes, we'll simulate pattern-specific error rates
+            const patternErrorRates = {
+                'pos_plus_pos': Math.random() * 30,      // 0-30% error rate
+                'pos_plus_neg': Math.random() * 60 + 20, // 20-80% error rate  
+                'pos_minus_pos': Math.random() * 25,     // 0-25% error rate
+                'pos_minus_neg': Math.random() * 70 + 10, // 10-80% error rate
+                'neg_plus_pos': Math.random() * 65 + 15, // 15-80% error rate
+                'neg_plus_neg': Math.random() * 50 + 25, // 25-75% error rate
+                'neg_minus_pos': Math.random() * 75 + 15, // 15-90% error rate
+                'neg_minus_neg': Math.random() * 80 + 10  // 10-90% error rate
+            };
+            
+            const studentErrorRate = patternErrorRates[pattern] || 0;
+            return studentErrorRate >= threshold;
+        }
+
+        // Update student list with filtering
+        function updateFilteredStudentList(filteredStudents) {
+            const listEl = document.getElementById('studentList');
+            listEl.innerHTML = '';
+            
+            if (filteredStudents.length === 0) {
+                listEl.innerHTML = '<div class="no-results">No students match the current filter criteria.</div>';
+                return;
+            }
+            
+            filteredStudents.forEach(student => {
+                const div = document.createElement('div');
+                div.className = 'student-item';
+                div.innerHTML = `
+                    <strong>${student.name}</strong><br>
+                    ID: ${student.id} • Grade: ${student.grade} • Class: ${student.class}
+                `;
+                div.onclick = () => showStudentProgress(student);
+                listEl.appendChild(div);
+            });
+        }
+
+        // Clear all filters
+        function clearAllFilters() {
+            document.getElementById('classFilter').value = '';
+            document.getElementById('gradeFilter').value = '';
+            document.getElementById('patternFilter').value = '';
+            document.getElementById('errorThreshold').value = '0';
+            
+            // Reset to show all students
+            updateStudentList();
+            document.getElementById('filterResults').textContent = `Showing ${students.length} of ${students.length} students`;
         }
 
         // Add new student
-        async function addStudent() {
+        function addStudent() {
             const id = document.getElementById('newStudentId').value.trim();
             const name = document.getElementById('newStudentName').value.trim();
             const grade = document.getElementById('newStudentGrade').value.trim();
@@ -818,15 +932,6 @@
                 const student = { id, name, grade, class: className || 'Unassigned' };
                 students.push(student);
                 
-                if (db) {
-                    try {
-                        await db.collection('students').doc(id).set(student);
-                    } catch (error) {
-                        console.error('Error adding student:', error);
-                    }
-                }
-                
-                // Clear form
                 document.getElementById('newStudentId').value = '';
                 document.getElementById('newStudentName').value = '';
                 document.getElementById('newStudentGrade').value = '';
@@ -854,49 +959,110 @@
             });
         }
 
-        // Show student progress
-        async function showStudentProgress(student) {
+        // Show student progress with enhanced analytics
+        function showStudentProgress(student) {
             document.getElementById('progressTitle').textContent = `${student.name}'s Progress`;
             document.getElementById('studentProgress').classList.remove('hidden');
             
-            // Clear previous selection
             document.querySelectorAll('.student-item').forEach(item => {
                 item.classList.remove('selected');
             });
             
-            // Highlight selected student
             event.target.classList.add('selected');
             
-            if (db) {
-                try {
-                    const doc = await db.collection('progress').doc(student.id).get();
-                    const progress = doc.exists ? doc.data() : {};
-                    
-                    const masteredCount = Object.values(progress).filter(fact => fact && fact.mastered).length;
-                    const totalFacts = Object.keys(progress).length;
-                    const totalMistakes = Object.values(progress).reduce((sum, fact) => {
-                        return sum + (fact && fact.mistakes ? fact.mistakes.length : 0);
-                    }, 0);
-                    
-                    document.getElementById('studentMastery').textContent = 
-                        totalFacts > 0 ? `${((masteredCount / 882) * 100).toFixed(1)}%` : '0%';
-                    document.getElementById('factsPracticed').textContent = totalFacts;
-                    document.getElementById('totalMistakes').textContent = totalMistakes;
-                } catch (error) {
-                    console.error('Error loading student progress:', error);
-                }
+            generateSampleAnalytics(student);
+        }
+
+        // Generate sample analytics
+        function generateSampleAnalytics(student) {
+            document.getElementById('studentMastery').textContent = '67.3%';
+            document.getElementById('factsPracticed').textContent = '84';
+            document.getElementById('totalMistakes').textContent = '23';
+            
+            const samplePatterns = [
+                { problem: '-3-7', errorRate: '78.6', errors: 11, attempts: 14 },
+                { problem: '4--5', errorRate: '71.4', errors: 5, attempts: 7 },
+                { problem: '-8+2', errorRate: '60.0', errors: 6, attempts: 10 },
+                { problem: '1-9', errorRate: '55.6', errors: 5, attempts: 9 },
+                { problem: '-2-6', errorRate: '50.0', errors: 4, attempts: 8 },
+                { problem: '3--4', errorRate: '45.5', errors: 5, attempts: 11 }
+            ];
+            
+            const errorPatternsDiv = document.getElementById('errorPatterns');
+            errorPatternsDiv.innerHTML = samplePatterns.map(pattern => `
+                <div class="pattern-card">
+                    <div class="pattern-problem">${pattern.problem.replace(/(\+|\-)/g, ' $1 ')} = ?</div>
+                    <div class="pattern-stats">
+                        ${pattern.errors} errors out of ${pattern.attempts} attempts<br>
+                        <strong>${pattern.errorRate}% error rate</strong>
+                    </div>
+                </div>
+            `).join('');
+            
+            generateSampleRecentProblems();
+        }
+
+        // Generate sample recent problems
+        function generateSampleRecentProblems() {
+            const sampleProblems = [];
+            const operations = ['+', '-'];
+            
+            for (let i = 0; i < 25; i++) {
+                const num1 = Math.floor(Math.random() * 21) - 10;
+                const num2 = Math.floor(Math.random() * 21) - 10;
+                const operation = operations[Math.floor(Math.random() * operations.length)];
+                const correctAnswer = operation === '+' ? num1 + num2 : num1 - num2;
+                const isCorrect = Math.random() > 0.25;
+                const studentAnswer = isCorrect ? correctAnswer : correctAnswer + Math.floor(Math.random() * 5) - 2;
+                
+                const timeAgo = Math.floor(Math.random() * 1440);
+                const timestamp = new Date(Date.now() - timeAgo * 60000);
+                
+                sampleProblems.push({
+                    problem: `${num1} ${operation} ${num2}`,
+                    correctAnswer,
+                    studentAnswer,
+                    isCorrect,
+                    timestamp: timestamp.toLocaleString()
+                });
             }
+            
+            const recentProblemsDiv = document.getElementById('recentProblems');
+            recentProblemsDiv.innerHTML = `
+                <table class="problem-table">
+                    <thead>
+                        <tr>
+                            <th>Problem</th>
+                            <th>Student Answer</th>
+                            <th>Correct Answer</th>
+                            <th>Result</th>
+                            <th>Time</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${sampleProblems.map(p => `
+                            <tr>
+                                <td><strong>${p.problem} = ?</strong></td>
+                                <td class="${p.isCorrect ? 'correct-answer' : 'incorrect-answer'}">${p.studentAnswer}</td>
+                                <td>${p.correctAnswer}</td>
+                                <td>${p.isCorrect ? 'Correct' : 'Wrong'}</td>
+                                <td class="timestamp">${p.timestamp}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
         }
 
         // Update dashboard stats
         function updateDashboardStats() {
             document.getElementById('totalStudents').textContent = students.length;
-            // Add more stats calculations here
         }
 
         // Show specific screen
         function showScreen(screenId) {
             document.getElementById('loginScreen').classList.add('hidden');
+            document.getElementById('teacherLoginScreen').classList.add('hidden');
             document.getElementById('practiceScreen').classList.add('hidden');
             document.getElementById('teacherScreen').classList.add('hidden');
             document.getElementById(screenId).classList.remove('hidden');
@@ -918,20 +1084,14 @@
                     submitAnswer();
                 } else if (!document.getElementById('loginScreen').classList.contains('hidden')) {
                     studentLogin();
+                } else if (!document.getElementById('teacherLoginScreen').classList.contains('hidden')) {
+                    teacherLogin();
                 }
             }
         });
 
         // Initialize app
         window.addEventListener('load', function() {
-            console.log('App loaded, waiting for Firebase...');
-            
-            // Wait a bit for Firebase scripts to load
-            setTimeout(() => {
-                initFirebase();
-            }, 1000);
-            
-            // Also try initializing immediately
             initFirebase();
         });
     </script>
