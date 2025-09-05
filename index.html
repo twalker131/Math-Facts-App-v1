@@ -76,6 +76,10 @@
             background: #757575;
             color: white;
         }
+        .btn-warning {
+            background: #ff9800;
+            color: white;
+        }
         button:hover {
             opacity: 0.9;
         }
@@ -100,6 +104,101 @@
         .feedback.incorrect {
             color: #f44336;
         }
+        
+        /* Visual Feedback Modal */
+        .feedback-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .feedback-content {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            max-width: 600px;
+            width: 90%;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+        
+        .feedback-title {
+            font-size: 1.8em;
+            color: #f44336;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+        
+        .visual-explanation {
+            margin: 30px 0;
+            padding: 20px;
+            background: #f9f9f9;
+            border-radius: 10px;
+            border: 2px solid #e0e0e0;
+        }
+        
+        .math-step {
+            margin: 15px 0;
+            font-size: 1.4em;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .visual-blocks {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 20px 0;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .block-group {
+            text-align: center;
+        }
+        
+        .block-label {
+            font-size: 0.9em;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        
+        .blocks {
+            display: inline-flex;
+            flex-wrap: wrap;
+            max-width: 150px;
+            gap: 2px;
+        }
+        
+        .block {
+            width: 12px;
+            height: 12px;
+            border: 1px solid #333;
+            margin: 1px;
+        }
+        
+        .block.positive {
+            background: #4caf50;
+        }
+        
+        .block.negative {
+            background: #f44336;
+        }
+        
+        .operation-symbol {
+            font-size: 2em;
+            margin: 0 15px;
+            color: #333;
+            font-weight: bold;
+        }
+        
         .student-list {
             text-align: left;
             max-height: 300px;
@@ -184,6 +283,18 @@
             </div>
             
             <div id="feedback" class="feedback hidden"></div>
+        </div>
+        
+        <!-- Visual Feedback Modal -->
+        <div id="feedbackModal" class="feedback-modal hidden">
+            <div class="feedback-content">
+                <div class="feedback-title">Let's work through this together! 🤔</div>
+                <div class="visual-explanation">
+                    <div id="visualProblem" class="math-step"></div>
+                    <div id="visualSolution"></div>
+                </div>
+                <button class="btn-success" onclick="closeFeedbackModal()">OK, I understand!</button>
+            </div>
         </div>
         
         <!-- Teacher Dashboard -->
@@ -271,13 +382,17 @@
         // Initialize Firebase
         function initFirebase() {
             try {
-                firebase.initializeApp(firebaseConfig);
-                db = firebase.firestore();
-                updateStatus('connected', '✅ Connected to Firebase database');
-                console.log('Firebase initialized successfully');
-                loadStudents();
+                if (typeof firebase !== 'undefined') {
+                    firebase.initializeApp(firebaseConfig);
+                    db = firebase.firestore();
+                    updateStatus('connected', '✅ Connected to Firebase database');
+                    console.log('Firebase initialized successfully');
+                    loadStudents();
+                } else {
+                    throw new Error('Firebase not available');
+                }
             } catch (error) {
-                console.error('Firebase initialization error:', error);
+                console.log('Firebase not available, running in local mode');
                 updateStatus('local', '⚠️ Running in local mode');
             }
         }
@@ -362,16 +477,269 @@
             if (isCorrect) score.correct++;
             
             updateScore();
-            showFeedback(isCorrect, currentProblem.answer);
+            
+            if (isCorrect) {
+                showFeedback(true, currentProblem.answer);
+                setTimeout(() => {
+                    nextProblem();
+                }, 2000);
+            } else {
+                showVisualFeedback(currentProblem, userAnswer);
+            }
             
             // Save progress to Firebase
             if (db && currentUser) {
                 saveProgress(currentUser.id, currentProblem, isCorrect, userAnswer);
             }
+        }
+
+        // Create visual representation for addition
+        function createAdditionVisual(num1, num2, answer) {
+            let html = '<div class="math-step">Let\'s add these numbers step by step:</div>';
             
-            setTimeout(() => {
-                nextProblem();
-            }, 2000);
+            // Check if we need to show canceling (positive + negative)
+            if ((num1 > 0 && num2 < 0) || (num1 < 0 && num2 > 0)) {
+                html += '<div class="math-step" style="color: #9c27b0;">Positive and negative numbers cancel each other out!</div>';
+                
+                // Show original numbers
+                html += '<div class="visual-blocks">';
+                html += '<div class="block-group">';
+                html += '<div class="block-label">Starting with:</div>';
+                html += '<div class="blocks">';
+                for (let i = 0; i < Math.abs(num1); i++) {
+                    html += `<div class="block ${num1 >= 0 ? 'positive' : 'negative'}"></div>`;
+                }
+                html += '</div>';
+                html += `<div style="margin-top: 5px;">${num1}</div>`;
+                html += '</div>';
+                
+                html += '<div class="operation-symbol">+</div>';
+                
+                html += '<div class="block-group">';
+                html += '<div class="block-label">Adding:</div>';
+                html += '<div class="blocks">';
+                for (let i = 0; i < Math.abs(num2); i++) {
+                    html += `<div class="block ${num2 >= 0 ? 'positive' : 'negative'}"></div>`;
+                }
+                html += '</div>';
+                html += `<div style="margin-top: 5px;">${num2}</div>`;
+                html += '</div>';
+                html += '</div>';
+                
+                // Show canceling process
+                let positiveCount = num1 > 0 ? Math.abs(num1) : Math.abs(num2);
+                let negativeCount = num1 < 0 ? Math.abs(num1) : Math.abs(num2);
+                let canceled = Math.min(positiveCount, negativeCount);
+                
+                if (canceled > 0) {
+                    html += '<div class="math-step" style="color: #9c27b0; margin: 20px 0;">Canceling pairs:</div>';
+                    html += '<div class="visual-blocks">';
+                    
+                    // Show canceled pairs
+                    for (let i = 0; i < canceled; i++) {
+                        html += '<div class="block positive" style="text-decoration: line-through; opacity: 0.5;"></div>';
+                        html += '<div style="margin: 0 5px; color: #999;">cancels</div>';
+                        html += '<div class="block negative" style="text-decoration: line-through; opacity: 0.5;"></div>';
+                        if (i < canceled - 1) html += '<div style="margin: 0 10px;"></div>';
+                    }
+                    html += '</div>';
+                }
+                
+                // Show equals and what's left
+                html += '<div class="operation-symbol">=</div>';
+                html += '<div class="block-group">';
+                html += '<div class="block-label">What\'s left:</div>';
+                if (answer === 0) {
+                    html += '<div style="margin-top: 5px;">0</div>';
+                } else {
+                    html += '<div class="blocks">';
+                    for (let i = 0; i < Math.abs(answer); i++) {
+                        html += `<div class="block ${answer >= 0 ? 'positive' : 'negative'}"></div>`;
+                    }
+                    html += '</div>';
+                    html += `<div style="margin-top: 5px;">${answer}</div>`;
+                }
+                html += '</div>';
+                
+            } else {
+                // Same sign addition - just combine them
+                html += '<div class="visual-blocks">';
+                
+                // Show first number
+                html += '<div class="block-group">';
+                html += '<div class="block-label">Starting with:</div>';
+                html += '<div class="blocks">';
+                for (let i = 0; i < Math.abs(num1); i++) {
+                    html += `<div class="block ${num1 >= 0 ? 'positive' : 'negative'}"></div>`;
+                }
+                html += '</div>';
+                html += `<div style="margin-top: 5px;">${num1}</div>`;
+                html += '</div>';
+                
+                html += '<div class="operation-symbol">+</div>';
+                
+                // Show second number
+                html += '<div class="block-group">';
+                html += '<div class="block-label">Adding:</div>';
+                html += '<div class="blocks">';
+                for (let i = 0; i < Math.abs(num2); i++) {
+                    html += `<div class="block ${num2 >= 0 ? 'positive' : 'negative'}"></div>`;
+                }
+                html += '</div>';
+                html += `<div style="margin-top: 5px;">${num2}</div>`;
+                html += '</div>';
+                
+                html += '<div class="operation-symbol">=</div>';
+                
+                // Show result
+                html += '<div class="block-group">';
+                html += '<div class="block-label">Result:</div>';
+                html += '<div class="blocks">';
+                for (let i = 0; i < Math.abs(answer); i++) {
+                    html += `<div class="block ${answer >= 0 ? 'positive' : 'negative'}"></div>`;
+                }
+                html += '</div>';
+                html += `<div style="margin-top: 5px;">${answer}</div>`;
+                html += '</div>';
+                
+                html += '</div>';
+            }
+            
+            // Final explanation
+            html += `
+                <div class="math-step" style="margin-top: 20px;">
+                    Starting with ${num1}, we add ${num2}
+                </div>
+                <div class="math-step" style="color: #2196f3;">
+                    ${num1} + ${num2} = ${answer}
+                </div>
+            `;
+            
+            return html;
+        }
+
+        // Create visual representation for subtraction
+        function createSubtractionVisual(num1, num2, answer) {
+            let html = '<div class="math-step">Let\'s work through this subtraction step by step:</div>';
+            
+            // Always show subtraction as adding the opposite
+            html += '<div class="math-step" style="color: #ff9800;">Subtracting is the same as adding the opposite!</div>';
+            
+            // Show original problem
+            html += '<div class="visual-blocks">';
+            html += '<div class="block-group">';
+            html += '<div class="block-label">Starting with:</div>';
+            html += '<div class="blocks">';
+            for (let i = 0; i < Math.abs(num1); i++) {
+                html += `<div class="block ${num1 >= 0 ? 'positive' : 'negative'}"></div>`;
+            }
+            html += '</div>';
+            html += `<div style="margin-top: 5px;">${num1}</div>`;
+            html += '</div>';
+            
+            html += '<div class="operation-symbol">-</div>';
+            
+            html += '<div class="block-group">';
+            html += '<div class="block-label">Subtracting:</div>';
+            html += '<div class="blocks">';
+            for (let i = 0; i < Math.abs(num2); i++) {
+                html += `<div class="block ${num2 >= 0 ? 'positive' : 'negative'}"></div>`;
+            }
+            html += '</div>';
+            html += `<div style="margin-top: 5px;">${num2}</div>`;
+            html += '</div>';
+            html += '</div>';
+            
+            // Show transformation
+            html += '<div class="math-step" style="color: #2196f3; margin: 20px 0;">↓ This becomes ↓</div>';
+            html += `<div class="math-step">Subtracting ${num2} = Adding ${-num2}</div>`;
+            
+            // Show converted problem (adding the opposite)
+            html += '<div class="visual-blocks">';
+            html += '<div class="block-group">';
+            html += '<div class="block-label">Starting with:</div>';
+            html += '<div class="blocks">';
+            for (let i = 0; i < Math.abs(num1); i++) {
+                html += `<div class="block ${num1 >= 0 ? 'positive' : 'negative'}"></div>`;
+            }
+            html += '</div>';
+            html += `<div style="margin-top: 5px;">${num1}</div>`;
+            html += '</div>';
+            
+            html += '<div class="operation-symbol">+</div>';
+            
+            html += '<div class="block-group">';
+            html += '<div class="block-label">Adding:</div>';
+            html += '<div class="blocks">';
+            for (let i = 0; i < Math.abs(num2); i++) {
+                html += `<div class="block ${num2 >= 0 ? 'negative' : 'positive'}"></div>`;
+            }
+            html += '</div>';
+            html += `<div style="margin-top: 5px;">${num2 >= 0 ? '-' + num2 : '+' + Math.abs(num2)}</div>`;
+            html += '</div>';
+            
+            html += '<div class="operation-symbol">=</div>';
+            
+            // Show final result
+            html += '<div class="block-group">';
+            html += '<div class="block-label">Result:</div>';
+            if (answer === 0) {
+                html += '<div style="margin-top: 5px;">0</div>';
+            } else {
+                html += '<div class="blocks">';
+                for (let i = 0; i < Math.abs(answer); i++) {
+                    html += `<div class="block ${answer >= 0 ? 'positive' : 'negative'}"></div>`;
+                }
+                html += '</div>';
+                html += `<div style="margin-top: 5px;">${answer}</div>`;
+            }
+            html += '</div>';
+            
+            html += '</div>';
+            
+            // Final explanation
+            html += `
+                <div class="math-step" style="color: #4caf50; margin-top: 20px;">
+                    Remember: ${num1} - ${num2} = ${num1} + (${-num2}) = ${answer}
+                </div>
+            `;
+            
+            return html;
+        }
+
+        // Show visual feedback for incorrect answers
+        function showVisualFeedback(problem, userAnswer) {
+            const modal = document.getElementById('feedbackModal');
+            const visualProblem = document.getElementById('visualProblem');
+            const visualSolution = document.getElementById('visualSolution');
+            
+            visualProblem.textContent = `${problem.num1} ${problem.operation} ${problem.num2} = ?`;
+            
+            let solutionHTML = '';
+            
+            if (problem.operation === '+') {
+                solutionHTML = createAdditionVisual(problem.num1, problem.num2, problem.answer);
+            } else {
+                solutionHTML = createSubtractionVisual(problem.num1, problem.num2, problem.answer);
+            }
+            
+            solutionHTML += `
+                <div class="math-step" style="color: #f44336; margin-top: 20px;">
+                    You answered: ${userAnswer} ❌
+                </div>
+                <div class="math-step" style="color: #4caf50;">
+                    Correct answer: ${problem.answer} ✅
+                </div>
+            `;
+            
+            visualSolution.innerHTML = solutionHTML;
+            modal.classList.remove('hidden');
+        }
+
+        // Close feedback modal and move to next problem
+        function closeFeedbackModal() {
+            document.getElementById('feedbackModal').classList.add('hidden');
+            nextProblem();
         }
 
         // Save student progress
