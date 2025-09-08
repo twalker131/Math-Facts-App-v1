@@ -341,6 +341,44 @@
             border-radius: 5px;
             border: 1px solid #f44336;
         }
+
+        /* Filters Section Styles */
+        .filters-section {
+            margin: 30px 0;
+            padding: 20px;
+            background: #f9f9f9;
+            border-radius: 10px;
+            border: 1px solid #e0e0e0;
+        }
+
+        .filters-section h3 {
+            margin: 0 0 20px 0;
+            color: #333;
+            border-bottom: 2px solid #2196f3;
+            padding-bottom: 5px;
+        }
+
+        .filters-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .filter-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+
+        .filter-group select {
+            width: 100%;
+            padding: 8px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
     </style>
 </head>
 <body>
@@ -437,6 +475,56 @@
             <input type="text" id="newStudentClass" placeholder="Class" />
             <button class="btn-primary" onclick="addStudent()">Add Student</button>
             
+            <!-- Smart Filters Section -->
+            <div class="filters-section">
+                <h3>Smart Filters</h3>
+                <div class="filters-grid">
+                    <div class="filter-group">
+                        <label for="classFilter">Filter by Class:</label>
+                        <select id="classFilter" onchange="applyFilters()">
+                            <option value="">All Classes</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label for="gradeFilter">Filter by Grade:</label>
+                        <select id="gradeFilter" onchange="applyFilters()">
+                            <option value="">All Grades</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label for="patternFilter">Filter by Problem Pattern:</label>
+                        <select id="patternFilter" onchange="applyFilters()">
+                            <option value="">All Patterns</option>
+                            <option value="pos_plus_pos">A + B (Positive + Positive)</option>
+                            <option value="pos_plus_neg">A + (-B) (Positive + Negative)</option>
+                            <option value="pos_minus_pos">A - B (Positive - Positive)</option>
+                            <option value="pos_minus_neg">A - (-B) (Positive - Negative)</option>
+                            <option value="neg_plus_pos">(-A) + B (Negative + Positive)</option>
+                            <option value="neg_plus_neg">(-A) + (-B) (Negative + Negative)</option>
+                            <option value="neg_minus_pos">(-A) - B (Negative - Positive)</option>
+                            <option value="neg_minus_neg">(-A) - (-B) (Negative - Negative)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label for="errorThreshold">Min Error Rate (%):</label>
+                        <select id="errorThreshold" onchange="applyFilters()">
+                            <option value="0">Any Error Rate</option>
+                            <option value="25">25%+ Errors</option>
+                            <option value="50">50%+ Errors</option>
+                            <option value="75">75%+ Errors</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                    <button class="btn-warning" onclick="clearAllFilters()" style="padding: 10px 20px;">Clear All Filters</button>
+                    <div id="filterResults" style="font-weight: bold; color: #555;">Showing all students</div>
+                </div>
+            </div>
+            
             <h3>Students</h3>
             <div class="student-list" id="studentList"></div>
             
@@ -473,10 +561,7 @@
     </div>
 
     <script>
-        // Teacher password - change this for your deployment
         const TEACHER_PASSWORD = "MathTeacher2024!";
-        
-        // Global variables
         let db = null;
         let currentUser = null;
         let currentProblem = null;
@@ -489,19 +574,16 @@
             { id: '005', name: 'Emma Wilson', grade: '4', class: 'Math-4B' }
         ];
 
-        // Initialize Firebase (gracefully handles when not available)
         function initFirebase() {
             updateStatus('local', 'Running in local mode');
         }
 
-        // Update status indicator
         function updateStatus(type, message) {
             const statusEl = document.getElementById('status');
             statusEl.className = `status ${type}`;
             statusEl.textContent = message;
         }
 
-        // Generate random math problem
         function generateProblem() {
             const num1 = Math.floor(Math.random() * 21) - 10;
             const num2 = Math.floor(Math.random() * 21) - 10;
@@ -518,7 +600,6 @@
             };
         }
 
-        // Student login
         function studentLogin() {
             const studentId = document.getElementById('studentId').value.trim();
             const student = students.find(s => s.id === studentId);
@@ -531,18 +612,16 @@
                 updateScore();
                 nextProblem();
             } else {
-                alert('Student ID not found!');
+                alert('Student ID not found! Try: 001, 002, 003, 004, or 005');
             }
         }
 
-        // Show teacher login screen
         function showTeacherLogin() {
             showScreen('teacherLoginScreen');
             document.getElementById('teacherPassword').focus();
             document.getElementById('loginError').classList.add('hidden');
         }
 
-        // Teacher login authentication
         function teacherLogin() {
             const enteredPassword = document.getElementById('teacherPassword').value;
             
@@ -556,14 +635,12 @@
             }
         }
 
-        // Back to main login
         function backToMainLogin() {
             document.getElementById('teacherPassword').value = '';
             document.getElementById('loginError').classList.add('hidden');
             showScreen('loginScreen');
         }
 
-        // Generate next problem
         function nextProblem() {
             currentProblem = generateProblem();
             document.getElementById('problem').textContent = currentProblem.display;
@@ -572,7 +649,6 @@
             hideFeedback();
         }
 
-        // Submit answer
         function submitAnswer() {
             const userAnswer = parseInt(document.getElementById('answer').value);
             if (isNaN(userAnswer)) return;
@@ -593,7 +669,6 @@
             }
         }
 
-        // Create visual representation for addition
         function createAdditionVisual(num1, num2, answer) {
             let html = '<div class="math-step">Let\'s add these numbers step by step:</div>';
             
@@ -651,7 +726,6 @@
             return html;
         }
 
-        // Create visual representation for subtraction
         function createSubtractionVisual(num1, num2, answer) {
             let html = '<div class="math-step">Let\'s work through this subtraction step by step:</div>';
             
@@ -734,7 +808,6 @@
             return html;
         }
 
-        // Show visual feedback for incorrect answers
         function showVisualFeedback(problem, userAnswer) {
             const modal = document.getElementById('feedbackModal');
             const visualProblem = document.getElementById('visualProblem');
@@ -763,18 +836,15 @@
             modal.classList.remove('hidden');
         }
 
-        // Close feedback modal and move to next problem
         function closeFeedbackModal() {
             document.getElementById('feedbackModal').classList.add('hidden');
             nextProblem();
         }
 
-        // Update score display
         function updateScore() {
             document.getElementById('studentScore').textContent = `Score: ${score.correct}/${score.total}`;
         }
 
-        // Show feedback
         function showFeedback(isCorrect, correctAnswer) {
             const feedbackEl = document.getElementById('feedback');
             feedbackEl.className = `feedback ${isCorrect ? 'correct' : 'incorrect'}`;
@@ -782,12 +852,10 @@
             feedbackEl.classList.remove('hidden');
         }
 
-        // Hide feedback
         function hideFeedback() {
             document.getElementById('feedback').classList.add('hidden');
         }
 
-        // Show teacher dashboard
         function showTeacherDashboard() {
             showScreen('teacherScreen');
             updateStudentList();
@@ -795,26 +863,21 @@
             populateFilterOptions();
         }
 
-        // Populate filter dropdown options
         function populateFilterOptions() {
             const classFilter = document.getElementById('classFilter');
             const gradeFilter = document.getElementById('gradeFilter');
             
-            // Check if filter elements exist before using them
             if (!classFilter || !gradeFilter) {
                 console.log('Filter elements not found - filters not available');
                 return;
             }
             
-            // Get unique classes and grades
             const classes = [...new Set(students.map(s => s.class))].sort();
             const grades = [...new Set(students.map(s => s.grade))].sort();
             
-            // Clear existing options (except "All")
             classFilter.innerHTML = '<option value="">All Classes</option>';
             gradeFilter.innerHTML = '<option value="">All Grades</option>';
             
-            // Add class options
             classes.forEach(className => {
                 const option = document.createElement('option');
                 option.value = className;
@@ -822,7 +885,6 @@
                 classFilter.appendChild(option);
             });
             
-            // Add grade options
             grades.forEach(grade => {
                 const option = document.createElement('option');
                 option.value = grade;
@@ -831,7 +893,6 @@
             });
         }
 
-        // Apply all filters
         function applyFilters() {
             const classFilter = document.getElementById('classFilter').value;
             const gradeFilter = document.getElementById('gradeFilter').value;
@@ -839,17 +900,14 @@
             const errorThreshold = parseInt(document.getElementById('errorThreshold').value);
             
             let filteredStudents = students.filter(student => {
-                // Apply class filter
                 if (classFilter && student.class !== classFilter) {
                     return false;
                 }
                 
-                // Apply grade filter
                 if (gradeFilter && student.grade !== gradeFilter) {
                     return false;
                 }
                 
-                // Apply pattern filter (using sample data for demo)
                 if (patternFilter) {
                     const hasPatternErrors = checkPatternErrors(student, patternFilter, errorThreshold);
                     if (!hasPatternErrors) {
@@ -860,40 +918,34 @@
                 return true;
             });
             
-            // Update student list display
             updateFilteredStudentList(filteredStudents);
             
-            // Update results counter
             const resultsText = `Showing ${filteredStudents.length} of ${students.length} students`;
             document.getElementById('filterResults').textContent = resultsText;
         }
 
-        // Check if student has errors in specific pattern (sample logic)
         function checkPatternErrors(student, pattern, threshold) {
-            // In a real implementation, this would check actual student data
-            // For demo purposes, we'll simulate pattern-specific error rates
             const patternErrorRates = {
-                'pos_plus_pos': Math.random() * 30,      // 0-30% error rate
-                'pos_plus_neg': Math.random() * 60 + 20, // 20-80% error rate  
-                'pos_minus_pos': Math.random() * 25,     // 0-25% error rate
-                'pos_minus_neg': Math.random() * 70 + 10, // 10-80% error rate
-                'neg_plus_pos': Math.random() * 65 + 15, // 15-80% error rate
-                'neg_plus_neg': Math.random() * 50 + 25, // 25-75% error rate
-                'neg_minus_pos': Math.random() * 75 + 15, // 15-90% error rate
-                'neg_minus_neg': Math.random() * 80 + 10  // 10-90% error rate
+                'pos_plus_pos': Math.random() * 30,
+                'pos_plus_neg': Math.random() * 60 + 20,
+                'pos_minus_pos': Math.random() * 25,
+                'pos_minus_neg': Math.random() * 70 + 10,
+                'neg_plus_pos': Math.random() * 65 + 15,
+                'neg_plus_neg': Math.random() * 50 + 25,
+                'neg_minus_pos': Math.random() * 75 + 15,
+                'neg_minus_neg': Math.random() * 80 + 10
             };
             
             const studentErrorRate = patternErrorRates[pattern] || 0;
             return studentErrorRate >= threshold;
         }
 
-        // Update student list with filtering
         function updateFilteredStudentList(filteredStudents) {
             const listEl = document.getElementById('studentList');
             listEl.innerHTML = '';
             
             if (filteredStudents.length === 0) {
-                listEl.innerHTML = '<div class="no-results">No students match the current filter criteria.</div>';
+                listEl.innerHTML = '<div style="text-align: center; padding: 20px; color: #666; font-style: italic;">No students match the current filter criteria.</div>';
                 return;
             }
             
@@ -909,19 +961,16 @@
             });
         }
 
-        // Clear all filters
         function clearAllFilters() {
             document.getElementById('classFilter').value = '';
             document.getElementById('gradeFilter').value = '';
             document.getElementById('patternFilter').value = '';
             document.getElementById('errorThreshold').value = '0';
             
-            // Reset to show all students
             updateStudentList();
             document.getElementById('filterResults').textContent = `Showing ${students.length} of ${students.length} students`;
         }
 
-        // Add new student
         function addStudent() {
             const id = document.getElementById('newStudentId').value.trim();
             const name = document.getElementById('newStudentName').value.trim();
@@ -939,10 +988,10 @@
                 
                 updateStudentList();
                 updateDashboardStats();
+                populateFilterOptions();
             }
         }
 
-        // Update student list
         function updateStudentList() {
             const listEl = document.getElementById('studentList');
             listEl.innerHTML = '';
@@ -959,7 +1008,6 @@
             });
         }
 
-        // Show student progress with enhanced analytics
         function showStudentProgress(student) {
             document.getElementById('progressTitle').textContent = `${student.name}'s Progress`;
             document.getElementById('studentProgress').classList.remove('hidden');
@@ -973,7 +1021,6 @@
             generateSampleAnalytics(student);
         }
 
-        // Generate sample analytics
         function generateSampleAnalytics(student) {
             document.getElementById('studentMastery').textContent = '67.3%';
             document.getElementById('factsPracticed').textContent = '84';
@@ -1002,7 +1049,6 @@
             generateSampleRecentProblems();
         }
 
-        // Generate sample recent problems
         function generateSampleRecentProblems() {
             const sampleProblems = [];
             const operations = ['+', '-'];
@@ -1054,12 +1100,10 @@
             `;
         }
 
-        // Update dashboard stats
         function updateDashboardStats() {
             document.getElementById('totalStudents').textContent = students.length;
         }
 
-        // Show specific screen
         function showScreen(screenId) {
             document.getElementById('loginScreen').classList.add('hidden');
             document.getElementById('teacherLoginScreen').classList.add('hidden');
@@ -1068,7 +1112,6 @@
             document.getElementById(screenId).classList.remove('hidden');
         }
 
-        // Logout
         function logout() {
             currentUser = null;
             currentProblem = null;
@@ -1077,7 +1120,6 @@
             document.getElementById('studentProgress').classList.add('hidden');
         }
 
-        // Allow Enter key to submit
         document.addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
                 if (!document.getElementById('practiceScreen').classList.contains('hidden')) {
@@ -1090,7 +1132,6 @@
             }
         });
 
-        // Initialize app
         window.addEventListener('load', function() {
             initFirebase();
         });
