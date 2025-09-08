@@ -1018,7 +1018,8 @@
             
             event.target.classList.add('selected');
             
-            generateSampleAnalytics(student);
+            // Load real data from Firebase or fall back to sample data
+            loadStudentProgress(student.id);
         }
 
         function generateSampleAnalytics(student) {
