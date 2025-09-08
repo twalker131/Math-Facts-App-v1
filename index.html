@@ -574,30 +574,9 @@
             { id: '005', name: 'Emma Wilson', grade: '4', class: 'Math-4B' }
         ];
 
-
-
-        
-  function initFirebase() {
-    console.log('Attempting Firebase initialization...');
-    console.log('Firebase available:', typeof firebase !== 'undefined');
-    console.log('Config apiKey:', firebaseConfig.apiKey);
-    
-    try {
-        if (typeof firebase !== 'undefined' && firebaseConfig.apiKey !== "your-api-key") {
-            firebase.initializeApp(firebaseConfig);
-            db = firebase.firestore();
-            console.log('Firebase initialized successfully');
-            updateStatus('connected', 'Connected to Firebase');
-            loadStudentsFromFirebase();
-        } else {
-            throw new Error('Firebase not configured');
+        function initFirebase() {
+            updateStatus('local', 'Running in local mode');
         }
-    } catch (error) {
-        console.log('Firebase initialization failed:', error);
-        updateStatus('local', 'Running in local mode');
-        db = null;
-    }
-}
 
         function updateStatus(type, message) {
             const statusEl = document.getElementById('status');
