@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -381,8 +380,6 @@
             font-size: 14px;
         }
     </style>
-     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 </head>
 <body>
     <div class="container">
@@ -463,11 +460,11 @@
                 </div>
                 <div class="card">
                     <h3>Average Mastery</h3>
-                    <div class="number" id="averageMastery">0%</div>
+                    <div class="number" id="averageMastery">67%</div>
                 </div>
                 <div class="card">
                     <h3>Active Today</h3>
-                    <div class="number" id="activeToday">0</div>
+                    <div class="number" id="activeToday">3</div>
                 </div>
             </div>
             
@@ -563,7 +560,10 @@
         </div>
     </div>
 
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     <script>
+        // Application State
         const TEACHER_PASSWORD = "MathTeacher2024!";
         let db = null;
         let currentUser = null;
@@ -577,7 +577,7 @@
             { id: '005', name: 'Emma Wilson', grade: '4', class: 'Math-4B' }
         ];
         
- // Firebase configuration
+        // Firebase Configuration
         const firebaseConfig = {
             apiKey: "AIzaSyDc850NX40XMBTwcypsRy_1zNIm-dMqCzw",
             authDomain: "math-facts-app-v1.firebaseapp.com",
@@ -586,9 +586,24 @@
             messagingSenderId: "797235830684",
             appId: "1:797235830684:web:e7c569649fedf456733259",
             measurementId: "G-MYV10DWB5M"
-            };
-        
-// Initialize Firebase
+        };
+
+        // Utility Functions
+        function updateStatus(type, message) {
+            const statusEl = document.getElementById('status');
+            statusEl.className = `status ${type}`;
+            statusEl.textContent = message;
+        }
+
+        function showScreen(screenId) {
+            const screens = ['loginScreen', 'teacherLoginScreen', 'practiceScreen', 'teacherScreen'];
+            screens.forEach(screen => {
+                document.getElementById(screen).classList.add('hidden');
+            });
+            document.getElementById(screenId).classList.remove('hidden');
+        }
+
+        // Firebase Functions
         function initFirebase() {
             console.log('Starting Firebase initialization...');
             try {
@@ -599,99 +614,37 @@
                     updateStatus('connected', 'Connected to Firebase');
                     loadStudentsFromFirebase();
                 } else {
-                    throw new Error('Firebase not loaded');
+                    console.log('Firebase not available, running in local mode');
+                    updateStatus('local', 'Running in local mode');
+                    db = null;
                 }
             } catch (error) {
-                console.error('Firebase initialization failed:', error.message);
+                console.error('Firebase initialization failed:', error);
                 updateStatus('local', 'Running in local mode');
                 db = null;
             }
         }
 
-
-        
-        // Initialize when page loads
-        window.addEventListener('load', function() {
-            console.log('Page loaded, initializing Firebase...');
-            initFirebase();
-        });
-// Add these functions after initFirebase():
-
-async function loadStudentsFromFirebase() {
-    if (!db) {
-        console.log('No database connection available');
-        return;
-    }
-    
-    try {
-        console.log('Attempting to load students from Firebase...');
-        const snapshot = await db.collection('students').get();
-        const firebaseStudents = [];
-        snapshot.forEach(doc => {
-            console.log('Found student:', doc.id, doc.data());
-            firebaseStudents.push({ id: doc.id, ...doc.data() });
-        });
-        
-        console.log('Total students loaded:', firebaseStudents.length);
-        
-        if (firebaseStudents.length > 0) {
-            students = firebaseStudents;
-            updateStudentList();
-            updateDashboardStats();
-            populateFilterOptions();
-            console.log('Students successfully loaded from Firebase');
-        } else {
-            console.log('No students found in Firebase, using default students');
-        }
-    } catch (error) {
-        console.error('Error loading students from Firebase:', error);
-        updateStatus('local', 'Running in local mode - Error loading data');
-    }
-}
-
-function loadStudentProgress(studentId) {
-    generateSampleAnalytics({ id: studentId });
-}
-// Add these functions after your initFirebase() function:
-
-
-    
-    try {
-        console.log('Attempting to load students from Firebase...');
-        const snapshot = await db.collection('students').get();
-        const firebaseStudents = [];
-        snapshot.forEach(doc => {
-            console.log('Found student:', doc.id, doc.data());
-            firebaseStudents.push({ id: doc.id, ...doc.data() });
-        });
-        
-        console.log('Total students loaded:', firebaseStudents.length);
-        
-        if (firebaseStudents.length > 0) {
-            students = firebaseStudents;
-            updateStudentList();
-            updateDashboardStats();
-            populateFilterOptions();
-            console.log('Students successfully loaded from Firebase');
-        } else {
-            console.log('No students found in Firebase, using default students');
-        }
-    } catch (error) {
-        console.error('Error loading students from Firebase:', error);
-        updateStatus('local', 'Running in local mode - Error loading data');
-    }
-}
-
-function loadStudentProgress(studentId) {
-    generateSampleAnalytics({ id: studentId });
-}
-        
-        function updateStatus(type, message) {
-            const statusEl = document.getElementById('status');
-            statusEl.className = `status ${type}`;
-            statusEl.textContent = message;
+        async function loadStudentsFromFirebase() {
+            if (!db) return;
+            
+            try {
+                const snapshot = await db.collection('students').get();
+                const firebaseStudents = [];
+                snapshot.forEach(doc => {
+                    firebaseStudents.push({ id: doc.id, ...doc.data() });
+                });
+                
+                if (firebaseStudents.length > 0) {
+                    students = firebaseStudents;
+                    console.log('Students loaded from Firebase');
+                }
+            } catch (error) {
+                console.error('Error loading students:', error);
+            }
         }
 
+        // Math Problem Generation
         function generateProblem() {
             const num1 = Math.floor(Math.random() * 21) - 10;
             const num2 = Math.floor(Math.random() * 21) - 10;
@@ -708,6 +661,7 @@ function loadStudentProgress(studentId) {
             };
         }
 
+        // Student Login Functions
         function studentLogin() {
             const studentId = document.getElementById('studentId').value.trim();
             const student = students.find(s => s.id === studentId);
@@ -724,6 +678,145 @@ function loadStudentProgress(studentId) {
             }
         }
 
+        function nextProblem() {
+            currentProblem = generateProblem();
+            document.getElementById('problem').textContent = currentProblem.display;
+            document.getElementById('answer').value = '';
+            document.getElementById('answer').focus();
+            hideFeedback();
+        }
+
+        function submitAnswer() {
+            const userAnswer = parseInt(document.getElementById('answer').value);
+            if (isNaN(userAnswer)) return;
+
+            const isCorrect = userAnswer === currentProblem.answer;
+            score.total++;
+            if (isCorrect) score.correct++;
+            
+            updateScore();
+            
+            if (isCorrect) {
+                showFeedback(true, currentProblem.answer);
+                setTimeout(nextProblem, 2000);
+            } else {
+                showVisualFeedback(currentProblem, userAnswer);
+            }
+        }
+
+        function updateScore() {
+            document.getElementById('studentScore').textContent = `Score: ${score.correct}/${score.total}`;
+        }
+
+        function showFeedback(isCorrect, correctAnswer) {
+            const feedbackEl = document.getElementById('feedback');
+            feedbackEl.className = `feedback ${isCorrect ? 'correct' : 'incorrect'}`;
+            feedbackEl.textContent = isCorrect ? 'Correct!' : `Not quite! The answer is ${correctAnswer}`;
+            feedbackEl.classList.remove('hidden');
+        }
+
+        function hideFeedback() {
+            document.getElementById('feedback').classList.add('hidden');
+        }
+
+        // Visual Feedback Functions
+        function showVisualFeedback(problem, userAnswer) {
+            const modal = document.getElementById('feedbackModal');
+            const visualProblem = document.getElementById('visualProblem');
+            const visualSolution = document.getElementById('visualSolution');
+            
+            visualProblem.textContent = `${problem.num1} ${problem.operation} ${problem.num2} = ?`;
+            
+            let solutionHTML = '';
+            if (problem.operation === '+') {
+                solutionHTML = createAdditionVisual(problem.num1, problem.num2, problem.answer);
+            } else {
+                solutionHTML = createSubtractionVisual(problem.num1, problem.num2, problem.answer);
+            }
+            
+            solutionHTML += `
+                <div class="math-step" style="color: #f44336; margin-top: 20px;">
+                    You answered: ${userAnswer}
+                </div>
+                <div class="math-step" style="color: #4caf50;">
+                    Correct answer: ${problem.answer}
+                </div>
+            `;
+            
+            visualSolution.innerHTML = solutionHTML;
+            modal.classList.remove('hidden');
+        }
+
+        function createAdditionVisual(num1, num2, answer) {
+            let html = '<div class="math-step">Let\'s add these numbers step by step:</div>';
+            html += '<div class="visual-blocks">';
+            
+            // First number visualization
+            html += '<div class="block-group">';
+            html += '<div class="block-label">Starting with:</div>';
+            html += '<div class="blocks">';
+            for (let i = 0; i < Math.abs(num1); i++) {
+                html += `<div class="block ${num1 >= 0 ? 'positive' : 'negative'}"></div>`;
+            }
+            html += '</div>';
+            html += `<div style="margin-top: 5px;">${num1}</div>`;
+            html += '</div>';
+            
+            html += '<div class="operation-symbol">+</div>';
+            
+            // Second number visualization
+            html += '<div class="block-group">';
+            html += '<div class="block-label">Adding:</div>';
+            html += '<div class="blocks">';
+            for (let i = 0; i < Math.abs(num2); i++) {
+                html += `<div class="block ${num2 >= 0 ? 'positive' : 'negative'}"></div>`;
+            }
+            html += '</div>';
+            html += `<div style="margin-top: 5px;">${num2}</div>`;
+            html += '</div>';
+            
+            html += '<div class="operation-symbol">=</div>';
+            
+            // Result visualization
+            html += '<div class="block-group">';
+            html += '<div class="block-label">Result:</div>';
+            if (answer === 0) {
+                html += '<div style="margin-top: 5px;">0</div>';
+            } else {
+                html += '<div class="blocks">';
+                for (let i = 0; i < Math.abs(answer); i++) {
+                    html += `<div class="block ${answer >= 0 ? 'positive' : 'negative'}"></div>`;
+                }
+                html += '</div>';
+                html += `<div style="margin-top: 5px;">${answer}</div>`;
+            }
+            html += '</div>';
+            html += '</div>';
+            
+            html += `<div class="math-step" style="color: #2196f3; margin-top: 20px;">
+                ${num1} + ${num2} = ${answer}
+            </div>`;
+            
+            return html;
+        }
+
+        function createSubtractionVisual(num1, num2, answer) {
+            let html = '<div class="math-step">Let\'s work through this subtraction:</div>';
+            html += '<div class="math-step" style="color: #ff9800;">Subtracting is the same as adding the opposite!</div>';
+            
+            html += `<div class="math-step" style="color: #2196f3; margin: 20px 0;">
+                ${num1} - ${num2} = ${num1} + (${-num2}) = ${answer}
+            </div>`;
+            
+            return html;
+        }
+
+        function closeFeedbackModal() {
+            document.getElementById('feedbackModal').classList.add('hidden');
+            nextProblem();
+        }
+
+        // Teacher Functions
         function showTeacherLogin() {
             showScreen('teacherLoginScreen');
             document.getElementById('teacherPassword').focus();
@@ -749,221 +842,6 @@ function loadStudentProgress(studentId) {
             showScreen('loginScreen');
         }
 
-        function nextProblem() {
-            currentProblem = generateProblem();
-            document.getElementById('problem').textContent = currentProblem.display;
-            document.getElementById('answer').value = '';
-            document.getElementById('answer').focus();
-            hideFeedback();
-        }
-
-        function submitAnswer() {
-            const userAnswer = parseInt(document.getElementById('answer').value);
-            if (isNaN(userAnswer)) return;
-
-            const isCorrect = userAnswer === currentProblem.answer;
-            score.total++;
-            if (isCorrect) score.correct++;
-            
-            updateScore();
-            
-            if (isCorrect) {
-                showFeedback(true, currentProblem.answer);
-                setTimeout(() => {
-                    nextProblem();
-                }, 2000);
-            } else {
-                showVisualFeedback(currentProblem, userAnswer);
-            }
-        }
-
-        function createAdditionVisual(num1, num2, answer) {
-            let html = '<div class="math-step">Let\'s add these numbers step by step:</div>';
-            
-            html += '<div class="visual-blocks">';
-            
-            html += '<div class="block-group">';
-            html += '<div class="block-label">Starting with:</div>';
-            html += '<div class="blocks">';
-            for (let i = 0; i < Math.abs(num1); i++) {
-                html += `<div class="block ${num1 >= 0 ? 'positive' : 'negative'}"></div>`;
-            }
-            html += '</div>';
-            html += `<div style="margin-top: 5px;">${num1}</div>`;
-            html += '</div>';
-            
-            html += '<div class="operation-symbol">+</div>';
-            
-            html += '<div class="block-group">';
-            html += '<div class="block-label">Adding:</div>';
-            html += '<div class="blocks">';
-            for (let i = 0; i < Math.abs(num2); i++) {
-                html += `<div class="block ${num2 >= 0 ? 'positive' : 'negative'}"></div>`;
-            }
-            html += '</div>';
-            html += `<div style="margin-top: 5px;">${num2}</div>`;
-            html += '</div>';
-            
-            html += '<div class="operation-symbol">=</div>';
-            
-            html += '<div class="block-group">';
-            html += '<div class="block-label">Result:</div>';
-            if (answer === 0) {
-                html += '<div style="margin-top: 5px;">0</div>';
-            } else {
-                html += '<div class="blocks">';
-                for (let i = 0; i < Math.abs(answer); i++) {
-                    html += `<div class="block ${answer >= 0 ? 'positive' : 'negative'}"></div>`;
-                }
-                html += '</div>';
-                html += `<div style="margin-top: 5px;">${answer}</div>`;
-            }
-            html += '</div>';
-            
-            html += '</div>';
-            
-            html += `
-                <div class="math-step" style="margin-top: 20px;">
-                    Starting with ${num1}, we add ${num2}
-                </div>
-                <div class="math-step" style="color: #2196f3;">
-                    ${num1} + ${num2} = ${answer}
-                </div>
-            `;
-            
-            return html;
-        }
-
-        function createSubtractionVisual(num1, num2, answer) {
-            let html = '<div class="math-step">Let\'s work through this subtraction step by step:</div>';
-            
-            html += '<div class="math-step" style="color: #ff9800;">Subtracting is the same as adding the opposite!</div>';
-            
-            html += '<div class="visual-blocks">';
-            html += '<div class="block-group">';
-            html += '<div class="block-label">Starting with:</div>';
-            html += '<div class="blocks">';
-            for (let i = 0; i < Math.abs(num1); i++) {
-                html += `<div class="block ${num1 >= 0 ? 'positive' : 'negative'}"></div>`;
-            }
-            html += '</div>';
-            html += `<div style="margin-top: 5px;">${num1}</div>`;
-            html += '</div>';
-            
-            html += '<div class="operation-symbol">-</div>';
-            
-            html += '<div class="block-group">';
-            html += '<div class="block-label">Subtracting:</div>';
-            html += '<div class="blocks">';
-            for (let i = 0; i < Math.abs(num2); i++) {
-                html += `<div class="block ${num2 >= 0 ? 'positive' : 'negative'}"></div>`;
-            }
-            html += '</div>';
-            html += `<div style="margin-top: 5px;">${num2}</div>`;
-            html += '</div>';
-            html += '</div>';
-            
-            html += '<div class="math-step" style="color: #2196f3; margin: 20px 0;">↓ This becomes ↓</div>';
-            html += `<div class="math-step">Subtracting ${num2} = Adding ${-num2}</div>`;
-            
-            html += '<div class="visual-blocks">';
-            html += '<div class="block-group">';
-            html += '<div class="block-label">Starting with:</div>';
-            html += '<div class="blocks">';
-            for (let i = 0; i < Math.abs(num1); i++) {
-                html += `<div class="block ${num1 >= 0 ? 'positive' : 'negative'}"></div>`;
-            }
-            html += '</div>';
-            html += `<div style="margin-top: 5px;">${num1}</div>`;
-            html += '</div>';
-            
-            html += '<div class="operation-symbol">+</div>';
-            
-            html += '<div class="block-group">';
-            html += '<div class="block-label">Adding:</div>';
-            html += '<div class="blocks">';
-            for (let i = 0; i < Math.abs(num2); i++) {
-                html += `<div class="block ${num2 >= 0 ? 'negative' : 'positive'}"></div>`;
-            }
-            html += '</div>';
-            html += `<div style="margin-top: 5px;">${num2 >= 0 ? '-' + num2 : '+' + Math.abs(num2)}</div>`;
-            html += '</div>';
-            
-            html += '<div class="operation-symbol">=</div>';
-            
-            html += '<div class="block-group">';
-            html += '<div class="block-label">Result:</div>';
-            if (answer === 0) {
-                html += '<div style="margin-top: 5px;">0</div>';
-            } else {
-                html += '<div class="blocks">';
-                for (let i = 0; i < Math.abs(answer); i++) {
-                    html += `<div class="block ${answer >= 0 ? 'positive' : 'negative'}"></div>`;
-                }
-                html += '</div>';
-                html += `<div style="margin-top: 5px;">${answer}</div>`;
-            }
-            html += '</div>';
-            
-            html += '</div>';
-            
-            html += `
-                <div class="math-step" style="color: #4caf50; margin-top: 20px;">
-                    Remember: ${num1} - ${num2} = ${num1} + (${-num2}) = ${answer}
-                </div>
-            `;
-            
-            return html;
-        }
-
-        function showVisualFeedback(problem, userAnswer) {
-            const modal = document.getElementById('feedbackModal');
-            const visualProblem = document.getElementById('visualProblem');
-            const visualSolution = document.getElementById('visualSolution');
-            
-            visualProblem.textContent = `${problem.num1} ${problem.operation} ${problem.num2} = ?`;
-            
-            let solutionHTML = '';
-            
-            if (problem.operation === '+') {
-                solutionHTML = createAdditionVisual(problem.num1, problem.num2, problem.answer);
-            } else {
-                solutionHTML = createSubtractionVisual(problem.num1, problem.num2, problem.answer);
-            }
-            
-            solutionHTML += `
-                <div class="math-step" style="color: #f44336; margin-top: 20px;">
-                    You answered: ${userAnswer}
-                </div>
-                <div class="math-step" style="color: #4caf50;">
-                    Correct answer: ${problem.answer}
-                </div>
-            `;
-            
-            visualSolution.innerHTML = solutionHTML;
-            modal.classList.remove('hidden');
-        }
-
-        function closeFeedbackModal() {
-            document.getElementById('feedbackModal').classList.add('hidden');
-            nextProblem();
-        }
-
-        function updateScore() {
-            document.getElementById('studentScore').textContent = `Score: ${score.correct}/${score.total}`;
-        }
-
-        function showFeedback(isCorrect, correctAnswer) {
-            const feedbackEl = document.getElementById('feedback');
-            feedbackEl.className = `feedback ${isCorrect ? 'correct' : 'incorrect'}`;
-            feedbackEl.textContent = isCorrect ? 'Correct!' : `Not quite! The answer is ${correctAnswer}`;
-            feedbackEl.classList.remove('hidden');
-        }
-
-        function hideFeedback() {
-            document.getElementById('feedback').classList.add('hidden');
-        }
-
         function showTeacherDashboard() {
             showScreen('teacherScreen');
             updateStudentList();
@@ -971,14 +849,55 @@ function loadStudentProgress(studentId) {
             populateFilterOptions();
         }
 
+        function addStudent() {
+            const id = document.getElementById('newStudentId').value.trim();
+            const name = document.getElementById('newStudentName').value.trim();
+            const grade = document.getElementById('newStudentGrade').value.trim();
+            const className = document.getElementById('newStudentClass').value.trim();
+            
+            if (id && name && grade) {
+                const student = { id, name, grade, class: className || 'Unassigned' };
+                students.push(student);
+                
+                // Clear the input fields
+                document.getElementById('newStudentId').value = '';
+                document.getElementById('newStudentName').value = '';
+                document.getElementById('newStudentGrade').value = '';
+                document.getElementById('newStudentClass').value = '';
+                
+                updateStudentList();
+                updateDashboardStats();
+                populateFilterOptions();
+            } else {
+                alert('Please fill in Student ID, Name, and Grade');
+            }
+        }
+
+        function updateStudentList() {
+            const listEl = document.getElementById('studentList');
+            listEl.innerHTML = '';
+            
+            students.forEach(student => {
+                const div = document.createElement('div');
+                div.className = 'student-item';
+                div.innerHTML = `
+                    <strong>${student.name}</strong><br>
+                    ID: ${student.id} • Grade: ${student.grade} • Class: ${student.class}
+                `;
+                div.onclick = () => showStudentProgress(student);
+                listEl.appendChild(div);
+            });
+        }
+
+        function updateDashboardStats() {
+            document.getElementById('totalStudents').textContent = students.length;
+        }
+
         function populateFilterOptions() {
             const classFilter = document.getElementById('classFilter');
             const gradeFilter = document.getElementById('gradeFilter');
             
-            if (!classFilter || !gradeFilter) {
-                console.log('Filter elements not found - filters not available');
-                return;
-            }
+            if (!classFilter || !gradeFilter) return;
             
             const classes = [...new Set(students.map(s => s.class))].sort();
             const grades = [...new Set(students.map(s => s.grade))].sort();
@@ -1001,6 +920,7 @@ function loadStudentProgress(studentId) {
             });
         }
 
+        // Filter Functions
         function applyFilters() {
             const classFilter = document.getElementById('classFilter').value;
             const gradeFilter = document.getElementById('gradeFilter').value;
@@ -1033,6 +953,7 @@ function loadStudentProgress(studentId) {
         }
 
         function checkPatternErrors(student, pattern, threshold) {
+            // Simulate pattern error rates for demo purposes
             const patternErrorRates = {
                 'pos_plus_pos': Math.random() * 30,
                 'pos_plus_neg': Math.random() * 60 + 20,
@@ -1079,58 +1000,24 @@ function loadStudentProgress(studentId) {
             document.getElementById('filterResults').textContent = `Showing ${students.length} of ${students.length} students`;
         }
 
-        function addStudent() {
-            const id = document.getElementById('newStudentId').value.trim();
-            const name = document.getElementById('newStudentName').value.trim();
-            const grade = document.getElementById('newStudentGrade').value.trim();
-            const className = document.getElementById('newStudentClass').value.trim();
-            
-            if (id && name && grade) {
-                const student = { id, name, grade, class: className || 'Unassigned' };
-                students.push(student);
-                
-                document.getElementById('newStudentId').value = '';
-                document.getElementById('newStudentName').value = '';
-                document.getElementById('newStudentGrade').value = '';
-                document.getElementById('newStudentClass').value = '';
-                
-                updateStudentList();
-                updateDashboardStats();
-                populateFilterOptions();
-            }
-        }
-
-        function updateStudentList() {
-            const listEl = document.getElementById('studentList');
-            listEl.innerHTML = '';
-            
-            students.forEach(student => {
-                const div = document.createElement('div');
-                div.className = 'student-item';
-                div.innerHTML = `
-                    <strong>${student.name}</strong><br>
-                    ID: ${student.id} • Grade: ${student.grade} • Class: ${student.class}
-                `;
-                div.onclick = () => showStudentProgress(student);
-                listEl.appendChild(div);
-            });
-        }
-
+        // Student Progress Functions
         function showStudentProgress(student) {
             document.getElementById('progressTitle').textContent = `${student.name}'s Progress`;
             document.getElementById('studentProgress').classList.remove('hidden');
             
+            // Clear previous selections
             document.querySelectorAll('.student-item').forEach(item => {
                 item.classList.remove('selected');
             });
             
+            // Add selection to clicked item
             event.target.classList.add('selected');
             
-            // Load real data from Firebase or fall back to sample data
-            loadStudentProgress(student.id);
+            generateSampleAnalytics(student);
         }
 
         function generateSampleAnalytics(student) {
+            // Generate sample data for demonstration
             document.getElementById('studentMastery').textContent = '67.3%';
             document.getElementById('factsPracticed').textContent = '84';
             document.getElementById('totalMistakes').textContent = '23';
@@ -1209,18 +1096,7 @@ function loadStudentProgress(studentId) {
             `;
         }
 
-        function updateDashboardStats() {
-            document.getElementById('totalStudents').textContent = students.length;
-        }
-
-        function showScreen(screenId) {
-            document.getElementById('loginScreen').classList.add('hidden');
-            document.getElementById('teacherLoginScreen').classList.add('hidden');
-            document.getElementById('practiceScreen').classList.add('hidden');
-            document.getElementById('teacherScreen').classList.add('hidden');
-            document.getElementById(screenId).classList.remove('hidden');
-        }
-
+        // General Functions
         function logout() {
             currentUser = null;
             currentProblem = null;
@@ -1229,6 +1105,7 @@ function loadStudentProgress(studentId) {
             document.getElementById('studentProgress').classList.add('hidden');
         }
 
+        // Event Listeners
         document.addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
                 if (!document.getElementById('practiceScreen').classList.contains('hidden')) {
@@ -1241,7 +1118,9 @@ function loadStudentProgress(studentId) {
             }
         });
 
+        // Initialize application when page loads
         window.addEventListener('load', function() {
+            console.log('Page loaded, initializing application...');
             initFirebase();
         });
     </script>
