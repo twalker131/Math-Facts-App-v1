@@ -381,6 +381,8 @@
             font-size: 14px;
         }
     </style>
+     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 </head>
 <body>
     <div class="container">
@@ -574,10 +576,42 @@
             { id: '004', name: 'David Brown', grade: '3', class: 'Math-3B' },
             { id: '005', name: 'Emma Wilson', grade: '4', class: 'Math-4B' }
         ];
-
+ // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyDc850NX40XMBTwcypsRy_1zNIm-dMqCzw",
+            authDomain: "math-facts-app-v1.firebaseapp.com",
+            projectId: "math-facts-app-v1",
+            storageBucket: "math-facts-app-v1.firebasestorage.app",
+            messagingSenderId: "797235830684",
+            appId: "1:797235830684:web:e7c569649fedf456733259",
+            measurementId: "G-MYV10DWB5M"
+            };
+        
+// Initialize Firebase
         function initFirebase() {
-            updateStatus('local', 'Running in local mode');
+            console.log('Starting Firebase initialization...');
+            try {
+                if (typeof firebase !== 'undefined') {
+                    firebase.initializeApp(firebaseConfig);
+                    db = firebase.firestore();
+                    console.log('Firebase initialized successfully');
+                    updateStatus('connected', 'Connected to Firebase');
+                    loadStudentsFromFirebase();
+                } else {
+                    throw new Error('Firebase not loaded');
+                }
+            } catch (error) {
+                console.error('Firebase initialization failed:', error.message);
+                updateStatus('local', 'Running in local mode');
+                db = null;
+            }
         }
+
+        // Initialize when page loads
+        window.addEventListener('load', function() {
+            console.log('Page loaded, initializing Firebase...');
+            initFirebase();
+        });
 
         function updateStatus(type, message) {
             const statusEl = document.getElementById('status');
