@@ -1043,7 +1043,7 @@
         }
 
         // Student Progress Functions
-        function showStudentProgress(student) {
+        async function showStudentProgress(student) {
             document.getElementById('progressTitle').textContent = `${student.name}'s Progress`;
             document.getElementById('studentProgress').classList.remove('hidden');
             
@@ -1053,9 +1053,129 @@
             });
             
             // Add selection to clicked item
-            event.target.classList.add('selected');
+            event.target.closest('.student-item').classList.add('selected');
             
-            generateSampleAnalytics(student);
+            // Load real data from Firebase or fall back to sample data
+            if (db) {
+                await loadRealStudentProgress(student.id);
+            } else {
+                generateSampleAnalytics(student);
+            }
+        }
+
+        async function loadRealStudentProgress(studentId) {
+            try {
+                console.log('Loading real progress for student:', studentId);
+                
+                // Get all problem attempts for this student
+                const snapshot = await db.collection('problemAttempts')
+                    .where('studentId', '==', studentId)
+                    .orderBy('timestamp', 'desc')
+                    .get();
+                
+                const attempts = [];
+                snapshot.forEach(doc => {
+                    attempts.push(doc.data());
+                });
+                
+                console.log('Found', attempts.length, 'problem attempts');
+                
+                if (attempts.length === 0) {
+                    // No data yet - show empty state
+                    document.getElementById('studentMastery').textContent = '0%';
+                    document.getElementById('factsPracticed').textContent = '0';
+                    document.getElementById('totalMistakes').textContent = '0';
+                    
+                    document.getElementById('errorPatterns').innerHTML = '<div style="text-align: center; padding: 20px; color: #666;">No problem attempts yet. Student needs to practice first!</div>';
+                    document.getElementById('recentProblems').innerHTML = '<div style="text-align: center; padding: 20px; color: #666;">No problems attempted yet.</div>';
+                    return;
+                }
+                
+                // Calculate real statistics
+                const totalAttempts = attempts.length;
+                const correctAttempts = attempts.filter(a => a.isCorrect).length;
+                const incorrectAttempts = totalAttempts - correctAttempts;
+                const masteryPercentage = ((correctAttempts / totalAttempts) * 100).toFixed(1);
+                
+                // Update summary stats
+                document.getElementById('studentMastery').textContent = masteryPercentage + '%';
+                document.getElementById('factsPracticed').textContent = totalAttempts;
+                document.getElementById('totalMistakes').textContent = incorrectAttempts;
+                
+                // Calculate error patterns
+                const problemStats = {};
+                attempts.forEach(attempt => {
+                    const problem = attempt.problem;
+                    if (!problemStats[problem]) {
+                        problemStats[problem] = { total: 0, errors: 0 };
+                    }
+                    problemStats[problem].total++;
+                    if (!attempt.isCorrect) {
+                        problemStats[problem].errors++;
+                    }
+                });
+                
+                // Find most difficult problems (highest error rate, minimum 3 attempts)
+                const difficultProblems = Object.entries(problemStats)
+                    .filter(([problem, stats]) => stats.total >= 3)
+                    .map(([problem, stats]) => ({
+                        problem,
+                        errorRate: ((stats.errors / stats.total) * 100).toFixed(1),
+                        errors: stats.errors,
+                        attempts: stats.total
+                    }))
+                    .sort((a, b) => parseFloat(b.errorRate) - parseFloat(a.errorRate))
+                    .slice(0, 6);
+                
+                // Display error patterns
+                if (difficultProblems.length > 0) {
+                    const errorPatternsDiv = document.getElementById('errorPatterns');
+                    errorPatternsDiv.innerHTML = difficultProblems.map(pattern => `
+                        <div class="pattern-card">
+                            <div class="pattern-problem">${pattern.problem} = ?</div>
+                            <div class="pattern-stats">
+                                ${pattern.errors} errors out of ${pattern.attempts} attempts<br>
+                                <strong>${pattern.errorRate}% error rate</strong>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    document.getElementById('errorPatterns').innerHTML = '<div style="text-align: center; padding: 20px; color: #666;">Not enough data yet to identify error patterns. Student needs more practice!</div>';
+                }
+                
+                // Display recent problems (last 25)
+                const recentAttempts = attempts.slice(0, 25);
+                const recentProblemsDiv = document.getElementById('recentProblems');
+                recentProblemsDiv.innerHTML = `
+                    <table class="problem-table">
+                        <thead>
+                            <tr>
+                                <th>Problem</th>
+                                <th>Student Answer</th>
+                                <th>Correct Answer</th>
+                                <th>Result</th>
+                                <th>Time</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${recentAttempts.map(attempt => `
+                                <tr>
+                                    <td><strong>${attempt.problem} = ?</strong></td>
+                                    <td class="${attempt.isCorrect ? 'correct-answer' : 'incorrect-answer'}">${attempt.studentAnswer}</td>
+                                    <td>${attempt.correctAnswer}</td>
+                                    <td>${attempt.isCorrect ? 'Correct' : 'Wrong'}</td>
+                                    <td class="timestamp">${new Date(attempt.timestamp.toDate()).toLocaleString()}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+                
+            } catch (error) {
+                console.error('Error loading student progress:', error);
+                // Fall back to sample data if there's an error
+                generateSampleAnalytics({ id: studentId });
+            }
         }
 
         function generateSampleAnalytics(student) {
