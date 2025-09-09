@@ -674,7 +674,12 @@
                 updateScore();
                 nextProblem();
             } else {
-                alert('Student ID not found! Try: 001, 002, 003, 004, or 005');
+                if (students.length === 0) {
+                    alert('No students have been added yet. Please contact your teacher to add you to the system.');
+                } else {
+                    const studentIds = students.map(s => s.id).join(', ');
+                    alert(`Student ID not found! Available student IDs: ${studentIds}`);
+                }
             }
         }
 
