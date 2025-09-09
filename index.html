@@ -856,6 +856,12 @@
             const className = document.getElementById('newStudentClass').value.trim();
             
             if (id && name && grade) {
+                // Check if student ID already exists
+                if (students.find(s => s.id === id)) {
+                    alert('Student ID already exists! Please use a different ID.');
+                    return;
+                }
+                
                 const student = { id, name, grade, class: className || 'Unassigned' };
                 students.push(student);
                 
@@ -868,8 +874,44 @@
                 updateStudentList();
                 updateDashboardStats();
                 populateFilterOptions();
+                
+                alert(`Student ${name} (ID: ${id}) added successfully!`);
             } else {
                 alert('Please fill in Student ID, Name, and Grade');
+            }
+        }
+
+        function addSampleStudents() {
+            const sampleStudents = [
+                { id: '001', name: 'Alice Johnson', grade: '3', class: 'Math-3A' },
+                { id: '002', name: 'Bob Smith', grade: '3', class: 'Math-3A' },
+                { id: '003', name: 'Carol Davis', grade: '4', class: 'Math-4B' },
+                { id: '004', name: 'David Brown', grade: '3', class: 'Math-3B' },
+                { id: '005', name: 'Emma Wilson', grade: '4', class: 'Math-4B' }
+            ];
+            
+            if (confirm('Add 5 sample students for testing? This will add test students with IDs 001-005.')) {
+                sampleStudents.forEach(student => {
+                    if (!students.find(s => s.id === student.id)) {
+                        students.push(student);
+                    }
+                });
+                
+                updateStudentList();
+                updateDashboardStats();
+                populateFilterOptions();
+                alert('Sample students added!');
+            }
+        }
+
+        function clearAllStudents() {
+            if (confirm('Are you sure you want to delete ALL students? This cannot be undone.')) {
+                students = [];
+                updateStudentList();
+                updateDashboardStats();
+                populateFilterOptions();
+                document.getElementById('studentProgress').classList.add('hidden');
+                alert('All students have been deleted.');
             }
         }
 
