@@ -608,12 +608,50 @@
             }
         }
 
+
+        
         // Initialize when page loads
         window.addEventListener('load', function() {
             console.log('Page loaded, initializing Firebase...');
             initFirebase();
         });
+// Add these functions after initFirebase():
 
+async function loadStudentsFromFirebase() {
+    if (!db) {
+        console.log('No database connection available');
+        return;
+    }
+    
+    try {
+        console.log('Attempting to load students from Firebase...');
+        const snapshot = await db.collection('students').get();
+        const firebaseStudents = [];
+        snapshot.forEach(doc => {
+            console.log('Found student:', doc.id, doc.data());
+            firebaseStudents.push({ id: doc.id, ...doc.data() });
+        });
+        
+        console.log('Total students loaded:', firebaseStudents.length);
+        
+        if (firebaseStudents.length > 0) {
+            students = firebaseStudents;
+            updateStudentList();
+            updateDashboardStats();
+            populateFilterOptions();
+            console.log('Students successfully loaded from Firebase');
+        } else {
+            console.log('No students found in Firebase, using default students');
+        }
+    } catch (error) {
+        console.error('Error loading students from Firebase:', error);
+        updateStatus('local', 'Running in local mode - Error loading data');
+    }
+}
+
+function loadStudentProgress(studentId) {
+    generateSampleAnalytics({ id: studentId });
+}
 // Add these functions after your initFirebase() function:
 
 async function loadStudentsFromFirebase() {
