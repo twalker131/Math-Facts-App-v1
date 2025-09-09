@@ -654,11 +654,7 @@ function loadStudentProgress(studentId) {
 }
 // Add these functions after your initFirebase() function:
 
-async function loadStudentsFromFirebase() {
-    if (!db) {
-        console.log('No database connection available');
-        return;
-    }
+
     
     try {
         console.log('Attempting to load students from Firebase...');
