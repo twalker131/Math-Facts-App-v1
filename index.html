@@ -1568,55 +1568,8 @@
                 document.getElementById('factsPracticed').textContent = totalAttempts;
                 document.getElementById('totalMistakes').textContent = incorrectAttempts;
                 
-                // Calculate error patterns
-                const problemStats = {};
-                attempts.forEach(attempt => {
-                    const problem = attempt.problem;
-                    if (!problemStats[problem]) {
-                        problemStats[problem] = { total: 0, errors: 0 };
-                    }
-                    problemStats[problem].total++;
-                    if (!attempt.isCorrect) {
-                        problemStats[problem].errors++;
-                    }
-                });
-                
-                // Find most difficult problems (highest error rate, minimum 2 attempts)
-                const difficultProblems = Object.entries(problemStats)
-                    .filter(([problem, stats]) => stats.total >= 2)
-                    .map(([problem, stats]) => ({
-                        problem,
-                        errorRate: ((stats.errors / stats.total) * 100).toFixed(1),
-                        errors: stats.errors,
-                        attempts: stats.total
-                    }))
-                    .sort((a, b) => parseFloat(b.errorRate) - parseFloat(a.errorRate))
-                    .slice(0, 6);
-                
-                // Display category mastery breakdown
-                let html = displayCategoryMastery(masteryResults.categoryDetails);
-                
-                // Display error patterns (keep below category mastery)
-                if (difficultProblems.length > 0) {
-                    html += `
-                        <h4 style="margin-bottom: 15px; color: #333;">Most Difficult Individual Problems</h4>
-                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
-                            ${difficultProblems.map(pattern => `
-                                <div class="pattern-card">
-                                    <div class="pattern-problem">${pattern.problem} = ?</div>
-                                    <div class="pattern-stats">
-                                        ${pattern.errors} errors out of ${pattern.attempts} attempts<br>
-                                        <strong>${pattern.errorRate}% error rate</strong>
-                                    </div>
-                                </div>
-                            `).join('')}
-                        </div>
-                    `;
-                } else {
-                    html += '<h4 style="margin: 30px 0 15px 0; color: #333;">Most Difficult Individual Problems</h4>';
-                    html += '<div style="text-align: center; padding: 20px; color: #666;">Not enough repeated problems yet to identify error patterns.</div>';
-                }
-                
+                // Display category mastery breakdown only
+                const html = displayCategoryMastery(masteryResults.categoryDetails);
                 document.getElementById('errorPatterns').innerHTML = html;
                 
                 // Display recent problems (last 25)
