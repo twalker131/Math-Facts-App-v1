@@ -552,7 +552,7 @@
                 
                 <!-- Error Patterns Section -->
                 <div class="student-detail-section">
-                    <h3>Problem Patterns - Most Difficult</h3>
+                    <h3>Problem Analysis</h3>
                     <div id="errorPatterns" class="error-patterns"></div>
                 </div>
                 
@@ -655,6 +655,148 @@
                 console.error('Error loading students from Firebase:', error);
                 console.error('Error details:', error.code, error.message);
             }
+        }
+
+        // Calculate category-based mastery system
+        function calculateCategoryMastery(attempts) {
+            // Define the 8 problem categories
+            const categories = {
+                'pos_plus_pos': 'Positive + Positive',
+                'pos_plus_neg': 'Positive + Negative', 
+                'pos_minus_pos': 'Positive - Positive',
+                'pos_minus_neg': 'Positive - Negative',
+                'neg_plus_pos': 'Negative + Positive',
+                'neg_plus_neg': 'Negative + Negative',
+                'neg_minus_pos': 'Negative - Positive',
+                'neg_minus_neg': 'Negative - Negative'
+            };
+            
+            // Categorize each attempt
+            const categoryAttempts = {};
+            Object.keys(categories).forEach(category => {
+                categoryAttempts[category] = [];
+            });
+            
+            attempts.forEach(attempt => {
+                const category = categorizeProblem(attempt.problem);
+                if (category && categoryAttempts[category]) {
+                    categoryAttempts[category].push(attempt);
+                }
+            });
+            
+            // Check mastery for each category (5/5 of last 5 attempts)
+            let masteredCategories = 0;
+            const categoryDetails = {};
+            
+            Object.keys(categories).forEach(categoryKey => {
+                const categoryAttemptsList = categoryAttempts[categoryKey];
+                
+                // Sort by timestamp (most recent first) and take last 5
+                const recentAttempts = categoryAttemptsList
+                    .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+                    .slice(0, 5);
+                
+                const correctCount = recentAttempts.filter(a => a.isCorrect).length;
+                const totalCount = recentAttempts.length;
+                const isMastered = totalCount >= 5 && correctCount === 5;
+                
+                if (isMastered) {
+                    masteredCategories++;
+                }
+                
+                categoryDetails[categoryKey] = {
+                    name: categories[categoryKey],
+                    correct: correctCount,
+                    total: totalCount,
+                    mastered: isMastered,
+                    percentage: totalCount > 0 ? ((correctCount / totalCount) * 100).toFixed(1) : 0
+                };
+            });
+            
+            // Each category is worth 12.5%, so mastery = (masteredCategories / 8) * 100
+            const overallMastery = ((masteredCategories / 8) * 100).toFixed(1);
+            
+            return {
+                percentage: overallMastery,
+                masteredCategories,
+                totalCategories: 8,
+                categoryDetails
+            };
+        }
+
+        function categorizeProblem(problemString) {
+            // Parse problem string like "5 + -3" or "-2 - 4"
+            const parts = problemString.trim().split(/\s+/);
+            if (parts.length !== 3) return null;
+            
+            const num1 = parseInt(parts[0]);
+            const operation = parts[1];
+            const num2 = parseInt(parts[2]);
+            
+            if (isNaN(num1) || isNaN(num2)) return null;
+            
+            const num1Positive = num1 >= 0;
+            const num2Positive = num2 >= 0;
+            
+            if (operation === '+') {
+                if (num1Positive && num2Positive) return 'pos_plus_pos';
+                if (num1Positive && !num2Positive) return 'pos_plus_neg';
+                if (!num1Positive && num2Positive) return 'neg_plus_pos';
+                if (!num1Positive && !num2Positive) return 'neg_plus_neg';
+            } else if (operation === '-') {
+                if (num1Positive && num2Positive) return 'pos_minus_pos';
+                if (num1Positive && !num2Positive) return 'pos_minus_neg';
+                if (!num1Positive && num2Positive) return 'neg_minus_pos';
+                if (!num1Positive && !num2Positive) return 'neg_minus_neg';
+            }
+            
+            return null;
+        }
+
+        function displayCategoryMastery(categoryDetails) {
+            const errorPatternsDiv = document.getElementById('errorPatterns');
+            
+            // Define the order we want to display categories
+            const categoryOrder = [
+                'pos_plus_pos',
+                'pos_plus_neg', 
+                'pos_minus_pos',
+                'pos_minus_neg',
+                'neg_plus_pos',
+                'neg_plus_neg',
+                'neg_minus_pos',
+                'neg_minus_neg'
+            ];
+            
+            let html = '<h4 style="margin-bottom: 15px; color: #333;">Mastery by Problem Type (Need 5/5 of last 5 attempts to master)</h4>';
+            html += '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-bottom: 30px;">';
+            
+            // Display all 8 categories in order
+            categoryOrder.forEach(key => {
+                const details = categoryDetails[key];
+                const bgColor = details.mastered ? '#e8f5e8' : (details.total > 0 ? '#fff3e0' : '#f5f5f5');
+                const borderColor = details.mastered ? '#4caf50' : (details.total > 0 ? '#ff9800' : '#ccc');
+                const statusIcon = details.mastered ? '✅' : (details.total > 0 ? '⏳' : '⭕');
+                
+                html += `
+                    <div style="background: ${bgColor}; padding: 15px; border-radius: 8px; border: 2px solid ${borderColor}; text-align: center;">
+                        <div style="font-weight: bold; color: #333; margin-bottom: 8px; font-size: 0.9em;">${details.name}</div>
+                        <div style="font-size: 1.5em; font-weight: bold; margin: 8px 0;">
+                            ${statusIcon} ${details.correct}/${details.total}
+                        </div>
+                        <div style="font-size: 0.9em; color: #666;">
+                            ${details.mastered ? 'MASTERED!' : 
+                              details.total === 0 ? 'No attempts yet' :
+                              `${details.percentage}% correct`}
+                            ${details.total < 5 && details.total > 0 ? `<br><small>Need ${5 - details.total} more attempts</small>` : ''}
+                            ${details.total === 0 ? `<br><small>Need 5 attempts to check mastery</small>` : ''}
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+            return html;
         }
 
         // Math Problem Generation
@@ -1308,21 +1450,31 @@
                     .sort((a, b) => parseFloat(b.errorRate) - parseFloat(a.errorRate))
                     .slice(0, 6);
                 
-                // Display error patterns
+                // Display category mastery breakdown
+                let html = displayCategoryMastery(masteryResults.categoryDetails);
+                
+                // Display error patterns (keep below category mastery)
                 if (difficultProblems.length > 0) {
-                    const errorPatternsDiv = document.getElementById('errorPatterns');
-                    errorPatternsDiv.innerHTML = difficultProblems.map(pattern => `
-                        <div class="pattern-card">
-                            <div class="pattern-problem">${pattern.problem} = ?</div>
-                            <div class="pattern-stats">
-                                ${pattern.errors} errors out of ${pattern.attempts} attempts<br>
-                                <strong>${pattern.errorRate}% error rate</strong>
-                            </div>
+                    html += `
+                        <h4 style="margin-bottom: 15px; color: #333;">Most Difficult Individual Problems</h4>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                            ${difficultProblems.map(pattern => `
+                                <div class="pattern-card">
+                                    <div class="pattern-problem">${pattern.problem} = ?</div>
+                                    <div class="pattern-stats">
+                                        ${pattern.errors} errors out of ${pattern.attempts} attempts<br>
+                                        <strong>${pattern.errorRate}% error rate</strong>
+                                    </div>
+                                </div>
+                            `).join('')}
                         </div>
-                    `).join('');
+                    `;
                 } else {
-                    document.getElementById('errorPatterns').innerHTML = '<div style="text-align: center; padding: 20px; color: #666;">Not enough repeated problems yet to identify error patterns.</div>';
+                    html += '<h4 style="margin: 30px 0 15px 0; color: #333;">Most Difficult Individual Problems</h4>';
+                    html += '<div style="text-align: center; padding: 20px; color: #666;">Not enough repeated problems yet to identify error patterns.</div>';
                 }
+                
+                document.getElementById('errorPatterns').innerHTML = html;
                 
                 // Display recent problems (last 25)
                 const recentAttempts = attempts.slice(0, 25);
