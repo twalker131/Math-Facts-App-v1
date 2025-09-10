@@ -1165,7 +1165,140 @@
             }
         }
 
-        function addSampleStudents() {
+        // CSV Upload Functions
+        async function uploadCSV() {
+            const fileInput = document.getElementById('csvFileInput');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                alert('Please select a CSV file first.');
+                return;
+            }
+            
+            if (!file.name.toLowerCase().endsWith('.csv')) {
+                alert('Please select a valid CSV file.');
+                return;
+            }
+            
+            try {
+                const text = await file.text();
+                const lines = text.split('\n').filter(line => line.trim());
+                
+                if (lines.length === 0) {
+                    alert('The CSV file appears to be empty.');
+                    return;
+                }
+                
+                const newStudents = [];
+                const errors = [];
+                
+                // Check if first line is a header
+                const firstLine = lines[0].toLowerCase();
+                const hasHeader = firstLine.includes('id') || firstLine.includes('name') || firstLine.includes('grade');
+                const startIndex = hasHeader ? 1 : 0;
+                
+                for (let i = startIndex; i < lines.length; i++) {
+                    const line = lines[i].trim();
+                    if (!line) continue;
+                    
+                    const parts = line.split(',').map(part => part.trim().replace(/^"|"$/g, ''));
+                    
+                    if (parts.length < 3) {
+                        errors.push(`Line ${i + 1}: Not enough columns (need at least id, name, grade)`);
+                        continue;
+                    }
+                    
+                    const [id, name, grade, className] = parts;
+                    
+                    if (!id || !name || !grade) {
+                        errors.push(`Line ${i + 1}: Missing required data (id: "${id}", name: "${name}", grade: "${grade}")`);
+                        continue;
+                    }
+                    
+                    // Check if student ID already exists
+                    if (students.find(s => s.id === id) || newStudents.find(s => s.id === id)) {
+                        errors.push(`Line ${i + 1}: Student ID "${id}" already exists`);
+                        continue;
+                    }
+                    
+                    newStudents.push({
+                        id: id,
+                        name: name,
+                        grade: grade,
+                        class: className || 'Unassigned'
+                    });
+                }
+                
+                if (errors.length > 0) {
+                    const proceed = confirm(`Found ${errors.length} error(s):\n\n${errors.slice(0, 5).join('\n')}${errors.length > 5 ? '\n...' : ''}\n\nDo you want to add the ${newStudents.length} valid students?`);
+                    
+                    if (!proceed) {
+                        return;
+                    }
+                }
+                
+                if (newStudents.length === 0) {
+                    alert('No valid students found in the CSV file.');
+                    return;
+                }
+                
+                // Add students to Firebase if connected
+                if (db) {
+                    try {
+                        const batch = db.batch();
+                        newStudents.forEach(student => {
+                            const docRef = db.collection('students').doc(student.id);
+                            batch.set(docRef, {
+                                name: student.name,
+                                grade: student.grade,
+                                class: student.class
+                            });
+                        });
+                        await batch.commit();
+                        console.log('Students saved to Firebase via batch');
+                    } catch (error) {
+                        console.error('Error saving students to Firebase:', error);
+                        alert('Students added locally, but could not save to Firebase. Check your connection.');
+                    }
+                }
+                
+                // Add to local array
+                students.push(...newStudents);
+                
+                // Update UI
+                updateStudentList();
+                updateDashboardStats();
+                populateFilterOptions();
+                
+                // Clear file input
+                fileInput.value = '';
+                
+                alert(`Successfully added ${newStudents.length} student(s)!${errors.length > 0 ? `\n(${errors.length} lines had errors and were skipped)` : ''}`);
+                
+            } catch (error) {
+                console.error('Error reading CSV file:', error);
+                alert('Error reading the CSV file. Please make sure it\'s a valid CSV format.');
+            }
+        }
+
+        function downloadSampleCSV() {
+            const csvContent = `id,name,grade,class
+001,Alice Johnson,3,Math-3A
+002,Bob Smith,3,Math-3A
+003,Carol Davis,4,Math-4B
+004,David Brown,3,Math-3B
+005,Emma Wilson,4,Math-4B`;
+            
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'sample_students.csv';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+        }
             const sampleStudents = [
                 { id: '001', name: 'Alice Johnson', grade: '3', class: 'Math-3A' },
                 { id: '002', name: 'Bob Smith', grade: '3', class: 'Math-3A' },
