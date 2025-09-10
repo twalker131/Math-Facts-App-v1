@@ -468,12 +468,30 @@
                 </div>
             </div>
             
-            <h3>Add New Student</h3>
-            <input type="text" id="newStudentId" placeholder="Student ID" />
-            <input type="text" id="newStudentName" placeholder="Name" />
-            <input type="text" id="newStudentGrade" placeholder="Grade" />
-            <input type="text" id="newStudentClass" placeholder="Class" />
-            <button class="btn-primary" onclick="addStudent()">Add Student</button>
+            <h3>Add Students</h3>
+            
+            <!-- Single Student Entry -->
+            <div style="margin-bottom: 20px;">
+                <h4>Add Single Student</h4>
+                <input type="text" id="newStudentId" placeholder="Student ID" />
+                <input type="text" id="newStudentName" placeholder="Name" />
+                <input type="text" id="newStudentGrade" placeholder="Grade" />
+                <input type="text" id="newStudentClass" placeholder="Class" />
+                <button class="btn-primary" onclick="addStudent()">Add Student</button>
+            </div>
+            
+            <!-- CSV Upload -->
+            <div style="margin-bottom: 20px; padding: 20px; background: #f0f8ff; border-radius: 10px; border: 2px dashed #2196f3;">
+                <h4>Upload Students via CSV</h4>
+                <p style="margin: 10px 0; color: #666; font-size: 14px;">
+                    CSV should have columns: <strong>id, name, grade, class</strong><br>
+                    Example: 001,Alice Johnson,3,Math-3A
+                </p>
+                <input type="file" id="csvFileInput" accept=".csv" style="margin: 10px 0;" />
+                <br>
+                <button class="btn-success" onclick="uploadCSV()">Upload CSV</button>
+                <button class="btn-secondary" onclick="downloadSampleCSV()" style="margin-left: 10px;">Download Sample CSV</button>
+            </div>
             
             <div style="margin: 20px 0;">
                 <button class="btn-warning" onclick="addSampleStudents()" style="margin-right: 10px;">Add Sample Students</button>
