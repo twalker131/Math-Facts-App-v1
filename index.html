@@ -475,6 +475,11 @@
             <input type="text" id="newStudentClass" placeholder="Class" />
             <button class="btn-primary" onclick="addStudent()">Add Student</button>
             
+            <div style="margin: 20px 0;">
+                <button class="btn-warning" onclick="addSampleStudents()" style="margin-right: 10px;">Add Sample Students</button>
+                <button class="btn-secondary" onclick="clearAllStudents()">Clear All Students</button>
+            </div>
+            
             <!-- Smart Filters Section -->
             <div class="filters-section">
                 <h3>Smart Filters</h3>
@@ -570,11 +575,7 @@
         let currentProblem = null;
         let score = { correct: 0, total: 0 };
         let students = [
-            { id: '001', name: 'Alice Johnson', grade: '3', class: 'Math-3A' },
-            { id: '002', name: 'Bob Smith', grade: '3', class: 'Math-3A' },
-            { id: '003', name: 'Carol Davis', grade: '4', class: 'Math-4B' },
-            { id: '004', name: 'David Brown', grade: '3', class: 'Math-3B' },
-            { id: '005', name: 'Emma Wilson', grade: '4', class: 'Math-4B' }
+            // Start with empty array - add real students using the teacher dashboard
         ];
         
         // Firebase Configuration
@@ -703,13 +704,43 @@
             hideFeedback();
         }
 
-        function submitAnswer() {
+        async function submitAnswer() {
             const userAnswer = parseInt(document.getElementById('answer').value);
             if (isNaN(userAnswer)) return;
 
             const isCorrect = userAnswer === currentProblem.answer;
             score.total++;
             if (isCorrect) score.correct++;
+            
+            // Save problem attempt to Firebase
+            console.log('About to save problem attempt...');
+            console.log('Database connection:', db ? 'Connected' : 'Not connected');
+            console.log('Current user:', currentUser);
+            
+            if (db && currentUser) {
+                const problemData = {
+                    studentId: currentUser.id,
+                    problem: `${currentProblem.num1} ${currentProblem.operation} ${currentProblem.num2}`,
+                    correctAnswer: currentProblem.answer,
+                    studentAnswer: userAnswer,
+                    isCorrect: isCorrect,
+                    timestamp: new Date(),
+                    sessionScore: `${score.correct}/${score.total}`
+                };
+                
+                console.log('Attempting to save problem data:', problemData);
+                
+                try {
+                    const docRef = await db.collection('problemAttempts').add(problemData);
+                    console.log('✅ Problem attempt saved to Firebase with ID:', docRef.id);
+                } catch (error) {
+                    console.error('❌ Error saving problem attempt:', error);
+                    console.error('Error code:', error.code);
+                    console.error('Error message:', error.message);
+                }
+            } else {
+                console.log('❌ Cannot save: db =', !!db, 'currentUser =', !!currentUser);
+            }
             
             updateScore();
             
@@ -944,7 +975,7 @@
             populateFilterOptions();
         }
 
-        function addStudent() {
+        async function addStudent() {
             const id = document.getElementById('newStudentId').value.trim();
             const name = document.getElementById('newStudentName').value.trim();
             const grade = document.getElementById('newStudentGrade').value.trim();
@@ -958,6 +989,22 @@
                 }
                 
                 const student = { id, name, grade, class: className || 'Unassigned' };
+                
+                // Save to Firebase if connected
+                if (db) {
+                    try {
+                        await db.collection('students').doc(id).set({
+                            name: student.name,
+                            grade: student.grade,
+                            class: student.class
+                        });
+                        console.log('Student saved to Firebase');
+                    } catch (error) {
+                        console.error('Error saving to Firebase:', error);
+                        alert('Student added locally, but could not save to Firebase. Check your connection.');
+                    }
+                }
+                
                 students.push(student);
                 
                 // Clear the input fields
@@ -1010,18 +1057,50 @@
             }
         }
 
+        async function deleteStudent(index) {
+            const student = students[index];
+            if (confirm(`Are you sure you want to delete ${student.name} (ID: ${student.id})?`)) {
+                // Delete from Firebase if connected
+                if (db) {
+                    try {
+                        await db.collection('students').doc(student.id).delete();
+                        console.log('Student deleted from Firebase');
+                    } catch (error) {
+                        console.error('Error deleting from Firebase:', error);
+                        alert('Student deleted locally, but could not remove from Firebase.');
+                    }
+                }
+                
+                students.splice(index, 1);
+                updateStudentList();
+                updateDashboardStats();
+                populateFilterOptions();
+                // Hide student progress if the deleted student was selected
+                document.getElementById('studentProgress').classList.add('hidden');
+            }
+        }
+
         function updateStudentList() {
             const listEl = document.getElementById('studentList');
             listEl.innerHTML = '';
             
-            students.forEach(student => {
+            if (students.length === 0) {
+                listEl.innerHTML = '<div style="text-align: center; padding: 20px; color: #666; font-style: italic;">No students added yet. Use the form above to add students.</div>';
+                return;
+            }
+            
+            students.forEach((student, index) => {
                 const div = document.createElement('div');
                 div.className = 'student-item';
                 div.innerHTML = `
-                    <strong>${student.name}</strong><br>
-                    ID: ${student.id} • Grade: ${student.grade} • Class: ${student.class}
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div onclick="showStudentProgress(students[${index}])" style="flex-grow: 1; cursor: pointer;">
+                            <strong>${student.name}</strong><br>
+                            ID: ${student.id} • Grade: ${student.grade} • Class: ${student.class}
+                        </div>
+                        <button onclick="deleteStudent(${index})" style="background: #f44336; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; font-size: 12px;">Delete</button>
+                    </div>
                 `;
-                div.onclick = () => showStudentProgress(student);
                 listEl.appendChild(div);
             });
         }
