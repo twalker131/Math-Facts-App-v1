@@ -1408,8 +1408,151 @@
             });
         }
 
-        function updateDashboardStats() {
+        async function updateDashboardStats() {
+            // Update total students
             document.getElementById('totalStudents').textContent = students.length;
+            
+            if (students.length === 0) {
+                document.getElementById('averageMastery').textContent = '0%';
+                document.getElementById('activeToday').textContent = '0';
+                updateClassMasteryOverview();
+                return;
+            }
+            
+            if (!db) {
+                // If no database connection, show default values
+                document.getElementById('averageMastery').textContent = 'N/A';
+                document.getElementById('activeToday').textContent = 'N/A';
+                updateClassMasteryOverview();
+                return;
+            }
+            
+            try {
+                // Calculate average mastery across all students
+                let totalMastery = 0;
+                let studentsWithData = 0;
+                let activeToday = 0;
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                
+                // Get all problem attempts
+                const allAttemptsSnapshot = await db.collection('problemAttempts').get();
+                const allAttempts = [];
+                
+                allAttemptsSnapshot.forEach(doc => {
+                    const data = doc.data();
+                    if (data.timestamp && data.timestamp.toDate) {
+                        data.timestamp = data.timestamp.toDate();
+                    }
+                    allAttempts.push(data);
+                });
+                
+                // Calculate mastery for each student
+                for (const student of students) {
+                    const studentAttempts = allAttempts.filter(attempt => attempt.studentId === student.id);
+                    
+                    if (studentAttempts.length > 0) {
+                        const masteryResults = calculateCategoryMastery(studentAttempts);
+                        totalMastery += parseFloat(masteryResults.percentage);
+                        studentsWithData++;
+                        
+                        // Check if student was active today
+                        const todayAttempts = studentAttempts.filter(attempt => {
+                            const attemptDate = new Date(attempt.timestamp);
+                            attemptDate.setHours(0, 0, 0, 0);
+                            return attemptDate.getTime() === today.getTime();
+                        });
+                        
+                        if (todayAttempts.length > 0) {
+                            activeToday++;
+                        }
+                    }
+                }
+                
+                // Update dashboard
+                const averageMastery = studentsWithData > 0 ? (totalMastery / studentsWithData).toFixed(1) : 0;
+                document.getElementById('averageMastery').textContent = averageMastery + '%';
+                document.getElementById('activeToday').textContent = activeToday;
+                
+                // Update class mastery overview
+                await updateClassMasteryOverview(allAttempts);
+                
+            } catch (error) {
+                console.error('Error calculating dashboard stats:', error);
+                document.getElementById('averageMastery').textContent = 'Error';
+                document.getElementById('activeToday').textContent = 'Error';
+            }
+        }
+
+        async function updateClassMasteryOverview(allAttempts = null) {
+            const container = document.getElementById('classMasteryOverview');
+            
+            if (students.length === 0) {
+                container.innerHTML = '<div style="text-align: center; color: #666; font-style: italic;">No students added yet</div>';
+                return;
+            }
+            
+            // Get unique classes
+            const classes = [...new Set(students.map(s => s.class))].sort();
+            
+            if (!db || !allAttempts) {
+                // Show classes without mastery data
+                container.innerHTML = classes.map(className => `
+                    <div class="card" style="min-width: 150px; flex: 1;">
+                        <h3>${className}</h3>
+                        <div class="number" style="font-size: 1.5em;">N/A</div>
+                        <div style="font-size: 0.8em; color: #666;">${students.filter(s => s.class === className).length} students</div>
+                    </div>
+                `).join('');
+                return;
+            }
+            
+            // Calculate mastery for each class
+            const classMasteryData = [];
+            
+            for (const className of classes) {
+                const classStudents = students.filter(s => s.class === className);
+                let totalClassMastery = 0;
+                let studentsWithData = 0;
+                
+                for (const student of classStudents) {
+                    const studentAttempts = allAttempts.filter(attempt => attempt.studentId === student.id);
+                    
+                    if (studentAttempts.length > 0) {
+                        const masteryResults = calculateCategoryMastery(studentAttempts);
+                        totalClassMastery += parseFloat(masteryResults.percentage);
+                        studentsWithData++;
+                    }
+                }
+                
+                const averageClassMastery = studentsWithData > 0 ? (totalClassMastery / studentsWithData).toFixed(1) : 0;
+                
+                classMasteryData.push({
+                    name: className,
+                    mastery: averageClassMastery,
+                    totalStudents: classStudents.length,
+                    studentsWithData: studentsWithData
+                });
+            }
+            
+            // Display class mastery cards
+            container.innerHTML = classMasteryData.map(classData => {
+                const masteryColor = classData.mastery >= 80 ? '#4caf50' : 
+                                   classData.mastery >= 60 ? '#ff9800' : '#f44336';
+                
+                return `
+                    <div class="card" style="min-width: 150px; flex: 1;">
+                        <h3>${classData.name}</h3>
+                        <div class="number" style="font-size: 1.5em; color: ${masteryColor};">
+                            ${classData.studentsWithData > 0 ? classData.mastery + '%' : 'No Data'}
+                        </div>
+                        <div style="font-size: 0.8em; color: #666;">
+                            ${classData.totalStudents} students
+                            ${classData.studentsWithData > 0 ? `<br>${classData.studentsWithData} with data` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
         }
 
         function populateFilterOptions() {
