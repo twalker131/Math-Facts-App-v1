@@ -456,16 +456,22 @@
             <div class="grid">
                 <div class="card">
                     <h3>Total Students</h3>
-                    <div class="number" id="totalStudents">5</div>
+                    <div class="number" id="totalStudents">0</div>
                 </div>
                 <div class="card">
                     <h3>Average Mastery</h3>
-                    <div class="number" id="averageMastery">67%</div>
+                    <div class="number" id="averageMastery">0%</div>
                 </div>
                 <div class="card">
                     <h3>Active Today</h3>
-                    <div class="number" id="activeToday">3</div>
+                    <div class="number" id="activeToday">0</div>
                 </div>
+            </div>
+            
+            <!-- Class Mastery Overview -->
+            <h3>Class Performance Overview</h3>
+            <div id="classMasteryOverview" class="grid" style="margin-bottom: 30px;">
+                <!-- Class mastery cards will be populated here -->
             </div>
             
             <h3>Add Students</h3>
@@ -592,9 +598,7 @@
         let currentUser = null;
         let currentProblem = null;
         let score = { correct: 0, total: 0 };
-        let students = [
-            // Start with empty array - add real students using the teacher dashboard
-        ];
+        let students = [];
         
         // Firebase Configuration
         const firebaseConfig = {
@@ -658,11 +662,9 @@
                 });
                 
                 console.log('Total students loaded from Firebase:', firebaseStudents.length);
-                console.log('Students array before update:', students);
                 
                 if (firebaseStudents.length > 0) {
                     students = firebaseStudents;
-                    console.log('Students array after update:', students);
                     updateStudentList();
                     updateDashboardStats();
                     populateFilterOptions();
@@ -671,13 +673,11 @@
                 }
             } catch (error) {
                 console.error('Error loading students from Firebase:', error);
-                console.error('Error details:', error.code, error.message);
             }
         }
 
         // Calculate category-based mastery system
         function calculateCategoryMastery(attempts) {
-            // Define the 8 problem categories
             const categories = {
                 'pos_plus_pos': 'Positive + Positive',
                 'pos_plus_neg': 'Positive + Negative', 
@@ -689,7 +689,6 @@
                 'neg_minus_neg': 'Negative - Negative'
             };
             
-            // Categorize each attempt
             const categoryAttempts = {};
             Object.keys(categories).forEach(category => {
                 categoryAttempts[category] = [];
@@ -702,14 +701,12 @@
                 }
             });
             
-            // Check mastery for each category (5/5 of last 5 attempts)
             let masteredCategories = 0;
             const categoryDetails = {};
             
             Object.keys(categories).forEach(categoryKey => {
                 const categoryAttemptsList = categoryAttempts[categoryKey];
                 
-                // Sort by timestamp (most recent first) and take last 5
                 const recentAttempts = categoryAttemptsList
                     .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
                     .slice(0, 5);
@@ -731,7 +728,6 @@
                 };
             });
             
-            // Each category is worth 12.5%, so mastery = (masteredCategories / 8) * 100
             const overallMastery = ((masteredCategories / 8) * 100).toFixed(1);
             
             return {
@@ -743,7 +739,6 @@
         }
 
         function categorizeProblem(problemString) {
-            // Parse problem string like "5 + -3" or "-2 - 4"
             const parts = problemString.trim().split(/\s+/);
             if (parts.length !== 3) return null;
             
@@ -772,24 +767,14 @@
         }
 
         function displayCategoryMastery(categoryDetails) {
-            const errorPatternsDiv = document.getElementById('errorPatterns');
-            
-            // Define the order we want to display categories
             const categoryOrder = [
-                'pos_plus_pos',
-                'pos_plus_neg', 
-                'pos_minus_pos',
-                'pos_minus_neg',
-                'neg_plus_pos',
-                'neg_plus_neg',
-                'neg_minus_pos',
-                'neg_minus_neg'
+                'pos_plus_pos', 'pos_plus_neg', 'pos_minus_pos', 'pos_minus_neg',
+                'neg_plus_pos', 'neg_plus_neg', 'neg_minus_pos', 'neg_minus_neg'
             ];
             
             let html = '<h4 style="margin-bottom: 15px; color: #333;">Mastery by Problem Type (Need 5/5 of last 5 attempts to master)</h4>';
             html += '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-bottom: 30px;">';
             
-            // Display all 8 categories in order
             categoryOrder.forEach(key => {
                 const details = categoryDetails[key];
                 const bgColor = details.mastered ? '#e8f5e8' : (details.total > 0 ? '#fff3e0' : '#f5f5f5');
@@ -872,11 +857,6 @@
             score.total++;
             if (isCorrect) score.correct++;
             
-            // Save problem attempt to Firebase
-            console.log('About to save problem attempt...');
-            console.log('Database connection:', db ? 'Connected' : 'Not connected');
-            console.log('Current user:', currentUser);
-            
             if (db && currentUser) {
                 const problemData = {
                     studentId: currentUser.id,
@@ -888,25 +868,19 @@
                     sessionScore: `${score.correct}/${score.total}`
                 };
                 
-                console.log('Attempting to save problem data:', problemData);
-                
                 try {
                     const docRef = await db.collection('problemAttempts').add(problemData);
-                    console.log('✅ Problem attempt saved to Firebase with ID:', docRef.id);
+                    console.log('Problem attempt saved to Firebase with ID:', docRef.id);
                 } catch (error) {
-                    console.error('❌ Error saving problem attempt:', error);
-                    console.error('Error code:', error.code);
-                    console.error('Error message:', error.message);
+                    console.error('Error saving problem attempt:', error);
                 }
-            } else {
-                console.log('❌ Cannot save: db =', !!db, 'currentUser =', !!currentUser);
             }
             
             updateScore();
             
             if (isCorrect) {
                 showFeedback(true, currentProblem.answer);
-                setTimeout(nextProblem, 1000); // Reduced from 2000ms to 1000ms (1 second)
+                setTimeout(nextProblem, 1000);
             } else {
                 showVisualFeedback(currentProblem, userAnswer);
             }
@@ -959,7 +933,6 @@
             let html = '<div class="math-step">Let\'s add these numbers step by step:</div>';
             html += '<div class="visual-blocks">';
             
-            // First number visualization
             html += '<div class="block-group">';
             html += '<div class="block-label">Starting with:</div>';
             html += '<div class="blocks">';
@@ -972,7 +945,6 @@
             
             html += '<div class="operation-symbol">+</div>';
             
-            // Second number visualization
             html += '<div class="block-group">';
             html += '<div class="block-label">Adding:</div>';
             html += '<div class="blocks">';
@@ -985,7 +957,6 @@
             
             html += '<div class="operation-symbol">=</div>';
             
-            // Result visualization
             html += '<div class="block-group">';
             html += '<div class="block-label">Result:</div>';
             if (answer === 0) {
@@ -1015,7 +986,6 @@
             
             html += '<div class="visual-blocks">';
             
-            // First number visualization
             html += '<div class="block-group">';
             html += '<div class="block-label">Starting with:</div>';
             html += '<div class="blocks">';
@@ -1028,7 +998,6 @@
             
             html += '<div class="operation-symbol">-</div>';
             
-            // Second number visualization
             html += '<div class="block-group">';
             html += '<div class="block-label">Subtracting:</div>';
             html += '<div class="blocks">';
@@ -1045,7 +1014,6 @@
             
             html += '<div class="visual-blocks">';
             
-            // Show as addition with opposite
             html += '<div class="block-group">';
             html += '<div class="block-label">Starting with:</div>';
             html += '<div class="blocks">';
@@ -1058,7 +1026,6 @@
             
             html += '<div class="operation-symbol">+</div>';
             
-            // Second number as opposite
             html += '<div class="block-group">';
             html += '<div class="block-label">Adding opposite:</div>';
             html += '<div class="blocks">';
@@ -1071,7 +1038,6 @@
             
             html += '<div class="operation-symbol">=</div>';
             
-            // Result visualization
             html += '<div class="block-group">';
             html += '<div class="block-label">Result:</div>';
             if (answer === 0) {
@@ -1142,7 +1108,6 @@
             const className = document.getElementById('newStudentClass').value.trim();
             
             if (id && name && grade) {
-                // Check if student ID already exists
                 if (students.find(s => s.id === id)) {
                     alert('Student ID already exists! Please use a different ID.');
                     return;
@@ -1150,7 +1115,6 @@
                 
                 const student = { id, name, grade, class: className || 'Unassigned' };
                 
-                // Save to Firebase if connected
                 if (db) {
                     try {
                         await db.collection('students').doc(id).set({
@@ -1167,7 +1131,6 @@
                 
                 students.push(student);
                 
-                // Clear the input fields
                 document.getElementById('newStudentId').value = '';
                 document.getElementById('newStudentName').value = '';
                 document.getElementById('newStudentGrade').value = '';
@@ -1210,30 +1173,57 @@
                 const newStudents = [];
                 const errors = [];
                 
-                // Check if first line is a header
-                const firstLine = lines[0].toLowerCase();
-                const hasHeader = firstLine.includes('id') || firstLine.includes('name') || firstLine.includes('grade');
-                const startIndex = hasHeader ? 1 : 0;
+                const firstLine = lines[0].toLowerCase().replace(/['"]/g, '');
+                const headers = firstLine.split(',').map(h => h.trim());
                 
-                for (let i = startIndex; i < lines.length; i++) {
+                console.log('CSV Headers detected:', headers);
+                
+                const columnMap = {};
+                headers.forEach((header, index) => {
+                    if (header.includes('id') || header === 'student_id' || header === 'studentid') {
+                        columnMap.id = index;
+                    } else if (header.includes('name') || header === 'student_name' || header === 'studentname') {
+                        columnMap.name = index;
+                    } else if (header.includes('grade') || header === 'student_grade' || header === 'level') {
+                        columnMap.grade = index;
+                    } else if (header.includes('class') || header === 'classroom' || header === 'room') {
+                        columnMap.class = index;
+                    }
+                });
+                
+                console.log('Column mapping:', columnMap);
+                
+                if (columnMap.id === undefined || columnMap.name === undefined || columnMap.grade === undefined) {
+                    const missingFields = [];
+                    if (columnMap.id === undefined) missingFields.push('id');
+                    if (columnMap.name === undefined) missingFields.push('name');
+                    if (columnMap.grade === undefined) missingFields.push('grade');
+                    
+                    alert(`Could not find required columns: ${missingFields.join(', ')}\n\nYour CSV headers: ${headers.join(', ')}\n\nExpected headers should contain: id, name, grade (class is optional)`);
+                    return;
+                }
+                
+                for (let i = 1; i < lines.length; i++) {
                     const line = lines[i].trim();
                     if (!line) continue;
                     
                     const parts = line.split(',').map(part => part.trim().replace(/^"|"$/g, ''));
                     
-                    if (parts.length < 3) {
-                        errors.push(`Line ${i + 1}: Not enough columns (need at least id, name, grade)`);
+                    if (parts.length < Math.max(columnMap.id, columnMap.name, columnMap.grade) + 1) {
+                        errors.push(`Line ${i + 1}: Not enough columns for mapped fields`);
                         continue;
                     }
                     
-                    const [id, name, grade, className] = parts;
+                    const id = parts[columnMap.id];
+                    const name = parts[columnMap.name];
+                    const grade = parts[columnMap.grade];
+                    const className = columnMap.class !== undefined ? parts[columnMap.class] : 'Unassigned';
                     
                     if (!id || !name || !grade) {
                         errors.push(`Line ${i + 1}: Missing required data (id: "${id}", name: "${name}", grade: "${grade}")`);
                         continue;
                     }
                     
-                    // Check if student ID already exists
                     if (students.find(s => s.id === id) || newStudents.find(s => s.id === id)) {
                         errors.push(`Line ${i + 1}: Student ID "${id}" already exists`);
                         continue;
@@ -1260,7 +1250,6 @@
                     return;
                 }
                 
-                // Add students to Firebase if connected
                 if (db) {
                     try {
                         const batch = db.batch();
@@ -1280,15 +1269,12 @@
                     }
                 }
                 
-                // Add to local array
                 students.push(...newStudents);
                 
-                // Update UI
                 updateStudentList();
                 updateDashboardStats();
                 populateFilterOptions();
                 
-                // Clear file input
                 fileInput.value = '';
                 
                 alert(`Successfully added ${newStudents.length} student(s)!${errors.length > 0 ? `\n(${errors.length} lines had errors and were skipped)` : ''}`);
@@ -1331,7 +1317,6 @@
                 let addedCount = 0;
                 
                 sampleStudents.forEach(student => {
-                    // Check if student already exists
                     if (!students.find(s => s.id === student.id)) {
                         students.push(student);
                         addedCount++;
@@ -1349,28 +1334,77 @@
             }
         }
 
-        function clearAllStudents() {
+        async function clearAllStudents() {
             if (confirm('Are you sure you want to delete ALL students? This cannot be undone.')) {
+                if (db) {
+                    try {
+                        console.log('Deleting all students from Firebase...');
+                        
+                        const snapshot = await db.collection('students').get();
+                        
+                        if (!snapshot.empty) {
+                            const batch = db.batch();
+                            snapshot.forEach(doc => {
+                                batch.delete(doc.ref);
+                            });
+                            
+                            await batch.commit();
+                            console.log('All students deleted from Firebase');
+                        }
+                        
+                        const attemptsSnapshot = await db.collection('problemAttempts').get();
+                        if (!attemptsSnapshot.empty) {
+                            const attemptsBatch = db.batch();
+                            attemptsSnapshot.forEach(doc => {
+                                attemptsBatch.delete(doc.ref);
+                            });
+                            
+                            await attemptsBatch.commit();
+                            console.log('All problem attempts deleted from Firebase');
+                        }
+                        
+                    } catch (error) {
+                        console.error('Error deleting from Firebase:', error);
+                        alert('Students deleted locally, but there was an error deleting from Firebase: ' + error.message);
+                    }
+                }
+                
                 students = [];
                 updateStudentList();
                 updateDashboardStats();
                 populateFilterOptions();
                 document.getElementById('studentProgress').classList.add('hidden');
-                alert('All students have been deleted.');
+                alert('All students and their data have been deleted.');
             }
         }
 
         async function deleteStudent(index) {
             const student = students[index];
-            if (confirm(`Are you sure you want to delete ${student.name} (ID: ${student.id})?`)) {
-                // Delete from Firebase if connected
+            if (confirm(`Are you sure you want to delete ${student.name} (ID: ${student.id})? This will also delete all their problem attempts.`)) {
                 if (db) {
                     try {
+                        console.log('Deleting student from Firebase:', student.id);
+                        
                         await db.collection('students').doc(student.id).delete();
-                        console.log('Student deleted from Firebase');
+                        console.log('Student document deleted from Firebase');
+                        
+                        const attemptsSnapshot = await db.collection('problemAttempts')
+                            .where('studentId', '==', student.id)
+                            .get();
+                        
+                        if (!attemptsSnapshot.empty) {
+                            const batch = db.batch();
+                            attemptsSnapshot.forEach(doc => {
+                                batch.delete(doc.ref);
+                            });
+                            
+                            await batch.commit();
+                            console.log('Student problem attempts deleted from Firebase');
+                        }
+                        
                     } catch (error) {
                         console.error('Error deleting from Firebase:', error);
-                        alert('Student deleted locally, but could not remove from Firebase.');
+                        alert('Student deleted locally, but there was an error deleting from Firebase: ' + error.message);
                     }
                 }
                 
@@ -1378,7 +1412,6 @@
                 updateStudentList();
                 updateDashboardStats();
                 populateFilterOptions();
-                // Hide student progress if the deleted student was selected
                 document.getElementById('studentProgress').classList.add('hidden');
             }
         }
@@ -1411,7 +1444,6 @@
         }
 
         async function updateDashboardStats() {
-            // Update total students
             document.getElementById('totalStudents').textContent = students.length;
             
             if (students.length === 0) {
@@ -1422,7 +1454,6 @@
             }
             
             if (!db) {
-                // If no database connection, show default values
                 document.getElementById('averageMastery').textContent = 'N/A';
                 document.getElementById('activeToday').textContent = 'N/A';
                 updateClassMasteryOverview();
@@ -1430,14 +1461,12 @@
             }
             
             try {
-                // Calculate average mastery across all students
                 let totalMastery = 0;
                 let studentsWithData = 0;
                 let activeToday = 0;
                 const today = new Date();
                 today.setHours(0, 0, 0, 0);
                 
-                // Get all problem attempts
                 const allAttemptsSnapshot = await db.collection('problemAttempts').get();
                 const allAttempts = [];
                 
@@ -1449,7 +1478,6 @@
                     allAttempts.push(data);
                 });
                 
-                // Calculate mastery for each student
                 for (const student of students) {
                     const studentAttempts = allAttempts.filter(attempt => attempt.studentId === student.id);
                     
@@ -1458,7 +1486,6 @@
                         totalMastery += parseFloat(masteryResults.percentage);
                         studentsWithData++;
                         
-                        // Check if student was active today
                         const todayAttempts = studentAttempts.filter(attempt => {
                             const attemptDate = new Date(attempt.timestamp);
                             attemptDate.setHours(0, 0, 0, 0);
@@ -1471,12 +1498,10 @@
                     }
                 }
                 
-                // Update dashboard
                 const averageMastery = studentsWithData > 0 ? (totalMastery / studentsWithData).toFixed(1) : 0;
                 document.getElementById('averageMastery').textContent = averageMastery + '%';
                 document.getElementById('activeToday').textContent = activeToday;
                 
-                // Update class mastery overview
                 await updateClassMasteryOverview(allAttempts);
                 
             } catch (error) {
@@ -1494,11 +1519,9 @@
                 return;
             }
             
-            // Get unique classes
             const classes = [...new Set(students.map(s => s.class))].sort();
             
             if (!db || !allAttempts) {
-                // Show classes without mastery data
                 container.innerHTML = classes.map(className => `
                     <div class="card" style="min-width: 150px; flex: 1;">
                         <h3>${className}</h3>
@@ -1509,7 +1532,6 @@
                 return;
             }
             
-            // Calculate mastery for each class
             const classMasteryData = [];
             
             for (const className of classes) {
@@ -1537,7 +1559,6 @@
                 });
             }
             
-            // Display class mastery cards
             container.innerHTML = classMasteryData.map(classData => {
                 const masteryColor = classData.mastery >= 80 ? '#4caf50' : 
                                    classData.mastery >= 60 ? '#ff9800' : '#f44336';
@@ -1593,7 +1614,6 @@
             
             let filteredStudents = students;
             
-            // Apply class and grade filters
             if (classFilter || gradeFilter) {
                 filteredStudents = students.filter(student => {
                     if (classFilter && student.class !== classFilter) {
@@ -1608,7 +1628,6 @@
                 });
             }
             
-            // Apply pattern and error threshold filters (requires Firebase data)
             if ((patternFilter || errorThreshold > 0) && db) {
                 try {
                     const snapshot = await db.collection('problemAttempts').get();
@@ -1641,13 +1660,11 @@
                 const studentAttempts = allAttempts.filter(attempt => attempt.studentId === student.id);
                 
                 if (studentAttempts.length === 0 && (patternFilter || errorThreshold > 0)) {
-                    // Skip students with no data if filtering by pattern/error
                     continue;
                 }
                 
                 let includeStudent = true;
                 
-                // Check pattern filter
                 if (patternFilter) {
                     const patternAttempts = studentAttempts.filter(attempt => {
                         const category = categorizeProblem(attempt.problem);
@@ -1657,7 +1674,6 @@
                     if (patternAttempts.length === 0) {
                         includeStudent = false;
                     } else if (errorThreshold > 0) {
-                        // Check error rate for this specific pattern
                         const errors = patternAttempts.filter(attempt => !attempt.isCorrect).length;
                         const errorRate = (errors / patternAttempts.length) * 100;
                         
@@ -1666,7 +1682,6 @@
                         }
                     }
                 } else if (errorThreshold > 0) {
-                    // Check overall error rate
                     const errors = studentAttempts.filter(attempt => !attempt.isCorrect).length;
                     const errorRate = (errors / studentAttempts.length) * 100;
                     
@@ -1719,15 +1734,12 @@
             document.getElementById('progressTitle').textContent = `${student.name}'s Progress`;
             document.getElementById('studentProgress').classList.remove('hidden');
             
-            // Clear previous selections
             document.querySelectorAll('.student-item').forEach(item => {
                 item.classList.remove('selected');
             });
             
-            // Add selection to clicked item
             event.target.closest('.student-item').classList.add('selected');
             
-            // Load real data from Firebase or fall back to sample data
             if (db) {
                 await loadRealStudentProgress(student.id);
             } else {
@@ -1739,7 +1751,6 @@
             try {
                 console.log('Loading real progress for student:', studentId);
                 
-                // Get all problem attempts for this student (simpler query without orderBy to avoid index issues)
                 const snapshot = await db.collection('problemAttempts')
                     .where('studentId', '==', studentId)
                     .get();
@@ -1747,20 +1758,17 @@
                 const attempts = [];
                 snapshot.forEach(doc => {
                     const data = doc.data();
-                    // Convert Firestore timestamp to JavaScript Date
                     if (data.timestamp && data.timestamp.toDate) {
                         data.timestamp = data.timestamp.toDate();
                     }
                     attempts.push(data);
                 });
                 
-                // Sort by timestamp in JavaScript instead of Firestore
                 attempts.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
                 
                 console.log('Found', attempts.length, 'problem attempts');
                 
                 if (attempts.length === 0) {
-                    // No data yet - show empty state
                     document.getElementById('studentMastery').textContent = '0%';
                     document.getElementById('factsPracticed').textContent = '0';
                     document.getElementById('totalMistakes').textContent = '0';
@@ -1770,22 +1778,18 @@
                     return;
                 }
                 
-                // Calculate real statistics
                 const totalAttempts = attempts.length;
                 const correctAttempts = attempts.filter(a => a.isCorrect).length;
                 const incorrectAttempts = totalAttempts - correctAttempts;
                 const masteryResults = calculateCategoryMastery(attempts);
                 
-                // Update summary stats
                 document.getElementById('studentMastery').textContent = masteryResults.percentage + '%';
                 document.getElementById('factsPracticed').textContent = totalAttempts;
                 document.getElementById('totalMistakes').textContent = incorrectAttempts;
                 
-                // Display category mastery breakdown only
                 const html = displayCategoryMastery(masteryResults.categoryDetails);
                 document.getElementById('errorPatterns').innerHTML = html;
                 
-                // Display recent problems (last 25)
                 const recentAttempts = attempts.slice(0, 25);
                 const recentProblemsDiv = document.getElementById('recentProblems');
                 recentProblemsDiv.innerHTML = `
@@ -1815,9 +1819,7 @@
                 
             } catch (error) {
                 console.error('Error loading student progress:', error);
-                console.error('Full error details:', error.message);
                 
-                // Show error message instead of falling back to sample data
                 document.getElementById('studentMastery').textContent = 'Error';
                 document.getElementById('factsPracticed').textContent = 'Error';
                 document.getElementById('totalMistakes').textContent = 'Error';
@@ -1838,7 +1840,6 @@
         }
 
         function generateSampleAnalytics(student) {
-            // Generate sample data for demonstration
             document.getElementById('studentMastery').textContent = '67.3%';
             document.getElementById('factsPracticed').textContent = '84';
             document.getElementById('totalMistakes').textContent = '23';
