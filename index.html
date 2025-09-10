@@ -1276,10 +1276,10 @@
                 const totalAttempts = attempts.length;
                 const correctAttempts = attempts.filter(a => a.isCorrect).length;
                 const incorrectAttempts = totalAttempts - correctAttempts;
-                const masteryPercentage = ((correctAttempts / totalAttempts) * 100).toFixed(1);
+                const masteryResults = calculateCategoryMastery(attempts);
                 
                 // Update summary stats
-                document.getElementById('studentMastery').textContent = masteryPercentage + '%';
+                document.getElementById('studentMastery').textContent = masteryResults.percentage + '%';
                 document.getElementById('factsPracticed').textContent = totalAttempts;
                 document.getElementById('totalMistakes').textContent = incorrectAttempts;
                 
