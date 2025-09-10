@@ -1397,11 +1397,13 @@
                 div.className = 'student-item';
                 div.innerHTML = `
                     <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <div onclick="showStudentProgress(students[${index}])" style="flex-grow: 1; cursor: pointer;">
-                            <strong>${student.name}</strong><br>
-                            ID: ${student.id} • Grade: ${student.grade} • Class: ${student.class}
+                        <div onclick="showStudentProgress(students[${index}])" style="flex-grow: 1; cursor: pointer; min-width: 0;">
+                            <strong style="display: block; margin-bottom: 2px; word-wrap: break-word; white-space: normal;">${student.name}</strong>
+                            <div style="font-size: 0.9em; color: #666;">
+                                ID: ${student.id} • Grade: ${student.grade} • Class: ${student.class}
+                            </div>
                         </div>
-                        <button onclick="deleteStudent(${index})" style="background: #f44336; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; font-size: 12px;">Delete</button>
+                        <button onclick="deleteStudent(${index})" style="background: #f44336; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; font-size: 12px; margin-left: 10px; flex-shrink: 0;">Delete</button>
                     </div>
                 `;
                 listEl.appendChild(div);
@@ -1583,30 +1585,48 @@
         }
 
         // Filter Functions
-        function applyFilters() {
+        async function applyFilters() {
             const classFilter = document.getElementById('classFilter').value;
             const gradeFilter = document.getElementById('gradeFilter').value;
             const patternFilter = document.getElementById('patternFilter').value;
             const errorThreshold = parseInt(document.getElementById('errorThreshold').value);
             
-            let filteredStudents = students.filter(student => {
-                if (classFilter && student.class !== classFilter) {
-                    return false;
-                }
-                
-                if (gradeFilter && student.grade !== gradeFilter) {
-                    return false;
-                }
-                
-                if (patternFilter) {
-                    const hasPatternErrors = checkPatternErrors(student, patternFilter, errorThreshold);
-                    if (!hasPatternErrors) {
+            let filteredStudents = students;
+            
+            // Apply class and grade filters
+            if (classFilter || gradeFilter) {
+                filteredStudents = students.filter(student => {
+                    if (classFilter && student.class !== classFilter) {
                         return false;
                     }
+                    
+                    if (gradeFilter && student.grade !== gradeFilter) {
+                        return false;
+                    }
+                    
+                    return true;
+                });
+            }
+            
+            // Apply pattern and error threshold filters (requires Firebase data)
+            if ((patternFilter || errorThreshold > 0) && db) {
+                try {
+                    const snapshot = await db.collection('problemAttempts').get();
+                    const allAttempts = [];
+                    
+                    snapshot.forEach(doc => {
+                        const data = doc.data();
+                        if (data.timestamp && data.timestamp.toDate) {
+                            data.timestamp = data.timestamp.toDate();
+                        }
+                        allAttempts.push(data);
+                    });
+                    
+                    filteredStudents = await filterByPatternAndErrors(filteredStudents, allAttempts, patternFilter, errorThreshold);
+                } catch (error) {
+                    console.error('Error applying pattern/error filters:', error);
                 }
-                
-                return true;
-            });
+            }
             
             updateFilteredStudentList(filteredStudents);
             
@@ -1614,21 +1634,53 @@
             document.getElementById('filterResults').textContent = resultsText;
         }
 
-        function checkPatternErrors(student, pattern, threshold) {
-            // Simulate pattern error rates for demo purposes
-            const patternErrorRates = {
-                'pos_plus_pos': Math.random() * 30,
-                'pos_plus_neg': Math.random() * 60 + 20,
-                'pos_minus_pos': Math.random() * 25,
-                'pos_minus_neg': Math.random() * 70 + 10,
-                'neg_plus_pos': Math.random() * 65 + 15,
-                'neg_plus_neg': Math.random() * 50 + 25,
-                'neg_minus_pos': Math.random() * 75 + 15,
-                'neg_minus_neg': Math.random() * 80 + 10
-            };
+        async function filterByPatternAndErrors(studentsToFilter, allAttempts, patternFilter, errorThreshold) {
+            const filteredStudents = [];
             
-            const studentErrorRate = patternErrorRates[pattern] || 0;
-            return studentErrorRate >= threshold;
+            for (const student of studentsToFilter) {
+                const studentAttempts = allAttempts.filter(attempt => attempt.studentId === student.id);
+                
+                if (studentAttempts.length === 0 && (patternFilter || errorThreshold > 0)) {
+                    // Skip students with no data if filtering by pattern/error
+                    continue;
+                }
+                
+                let includeStudent = true;
+                
+                // Check pattern filter
+                if (patternFilter) {
+                    const patternAttempts = studentAttempts.filter(attempt => {
+                        const category = categorizeProblem(attempt.problem);
+                        return category === patternFilter;
+                    });
+                    
+                    if (patternAttempts.length === 0) {
+                        includeStudent = false;
+                    } else if (errorThreshold > 0) {
+                        // Check error rate for this specific pattern
+                        const errors = patternAttempts.filter(attempt => !attempt.isCorrect).length;
+                        const errorRate = (errors / patternAttempts.length) * 100;
+                        
+                        if (errorRate < errorThreshold) {
+                            includeStudent = false;
+                        }
+                    }
+                } else if (errorThreshold > 0) {
+                    // Check overall error rate
+                    const errors = studentAttempts.filter(attempt => !attempt.isCorrect).length;
+                    const errorRate = (errors / studentAttempts.length) * 100;
+                    
+                    if (errorRate < errorThreshold) {
+                        includeStudent = false;
+                    }
+                }
+                
+                if (includeStudent) {
+                    filteredStudents.push(student);
+                }
+            }
+            
+            return filteredStudents;
         }
 
         function updateFilteredStudentList(filteredStudents) {
