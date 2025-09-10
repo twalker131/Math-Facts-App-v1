@@ -806,12 +806,90 @@
         }
 
         function createSubtractionVisual(num1, num2, answer) {
-            let html = '<div class="math-step">Let\'s work through this subtraction:</div>';
+            let html = '<div class="math-step">Let\'s work through this subtraction step by step:</div>';
+            
             html += '<div class="math-step" style="color: #ff9800;">Subtracting is the same as adding the opposite!</div>';
             
-            html += `<div class="math-step" style="color: #2196f3; margin: 20px 0;">
-                ${num1} - ${num2} = ${num1} + (${-num2}) = ${answer}
-            </div>`;
+            html += '<div class="visual-blocks">';
+            
+            // First number visualization
+            html += '<div class="block-group">';
+            html += '<div class="block-label">Starting with:</div>';
+            html += '<div class="blocks">';
+            for (let i = 0; i < Math.abs(num1); i++) {
+                html += `<div class="block ${num1 >= 0 ? 'positive' : 'negative'}"></div>`;
+            }
+            html += '</div>';
+            html += `<div style="margin-top: 5px;">${num1}</div>`;
+            html += '</div>';
+            
+            html += '<div class="operation-symbol">-</div>';
+            
+            // Second number visualization
+            html += '<div class="block-group">';
+            html += '<div class="block-label">Subtracting:</div>';
+            html += '<div class="blocks">';
+            for (let i = 0; i < Math.abs(num2); i++) {
+                html += `<div class="block ${num2 >= 0 ? 'positive' : 'negative'}"></div>`;
+            }
+            html += '</div>';
+            html += `<div style="margin-top: 5px;">${num2}</div>`;
+            html += '</div>';
+            html += '</div>';
+            
+            html += '<div class="math-step" style="color: #2196f3; margin: 20px 0;">↓ This becomes ↓</div>';
+            html += `<div class="math-step">Subtracting ${num2} = Adding ${-num2}</div>`;
+            
+            html += '<div class="visual-blocks">';
+            
+            // Show as addition with opposite
+            html += '<div class="block-group">';
+            html += '<div class="block-label">Starting with:</div>';
+            html += '<div class="blocks">';
+            for (let i = 0; i < Math.abs(num1); i++) {
+                html += `<div class="block ${num1 >= 0 ? 'positive' : 'negative'}"></div>`;
+            }
+            html += '</div>';
+            html += `<div style="margin-top: 5px;">${num1}</div>`;
+            html += '</div>';
+            
+            html += '<div class="operation-symbol">+</div>';
+            
+            // Second number as opposite
+            html += '<div class="block-group">';
+            html += '<div class="block-label">Adding opposite:</div>';
+            html += '<div class="blocks">';
+            for (let i = 0; i < Math.abs(num2); i++) {
+                html += `<div class="block ${num2 >= 0 ? 'negative' : 'positive'}"></div>`;
+            }
+            html += '</div>';
+            html += `<div style="margin-top: 5px;">${num2 >= 0 ? '-' + num2 : '+' + Math.abs(num2)}</div>`;
+            html += '</div>';
+            
+            html += '<div class="operation-symbol">=</div>';
+            
+            // Result visualization
+            html += '<div class="block-group">';
+            html += '<div class="block-label">Result:</div>';
+            if (answer === 0) {
+                html += '<div style="margin-top: 5px;">0</div>';
+            } else {
+                html += '<div class="blocks">';
+                for (let i = 0; i < Math.abs(answer); i++) {
+                    html += `<div class="block ${answer >= 0 ? 'positive' : 'negative'}"></div>`;
+                }
+                html += '</div>';
+                html += `<div style="margin-top: 5px;">${answer}</div>`;
+            }
+            html += '</div>';
+            
+            html += '</div>';
+            
+            html += `
+                <div class="math-step" style="color: #4caf50; margin-top: 20px;">
+                    Remember: ${num1} - ${num2} = ${num1} + (${-num2}) = ${answer}
+                </div>
+            `;
             
             return html;
         }
