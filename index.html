@@ -629,18 +629,30 @@
             if (!db) return;
             
             try {
+                console.log('Attempting to load students from Firebase...');
                 const snapshot = await db.collection('students').get();
                 const firebaseStudents = [];
+                
                 snapshot.forEach(doc => {
+                    console.log('Found student document:', doc.id, doc.data());
                     firebaseStudents.push({ id: doc.id, ...doc.data() });
                 });
                 
+                console.log('Total students loaded from Firebase:', firebaseStudents.length);
+                console.log('Students array before update:', students);
+                
                 if (firebaseStudents.length > 0) {
                     students = firebaseStudents;
-                    console.log('Students loaded from Firebase');
+                    console.log('Students array after update:', students);
+                    updateStudentList();
+                    updateDashboardStats();
+                    populateFilterOptions();
+                } else {
+                    console.log('No students found in Firebase collection');
                 }
             } catch (error) {
-                console.error('Error loading students:', error);
+                console.error('Error loading students from Firebase:', error);
+                console.error('Error details:', error.code, error.message);
             }
         }
 
