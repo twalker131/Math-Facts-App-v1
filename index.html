@@ -1147,143 +1147,191 @@
         }
 
         // CSV Upload Functions
-        async function uploadCSV() {
-            const fileInput = document.getElementById('csvFileInput');
-            const file = fileInput.files[0];
+// Fixed CSV Upload Function - Replace the existing uploadCSV function with this
+async function uploadCSV() {
+    const fileInput = document.getElementById('csvFileInput');
+    const file = fileInput.files[0];
+    
+    if (!file) {
+        alert('Please select a CSV file first.');
+        return;
+    }
+    
+    if (!file.name.toLowerCase().endsWith('.csv')) {
+        alert('Please select a valid CSV file.');
+        return;
+    }
+    
+    try {
+        const text = await file.text();
+        const lines = text.split('\n').filter(line => line.trim());
+        
+        if (lines.length === 0) {
+            alert('The CSV file appears to be empty.');
+            return;
+        }
+        
+        const newStudents = [];
+        const errors = [];
+        
+        // Parse header to map columns correctly - more robust detection
+        const firstLine = lines[0].toLowerCase().trim();
+        const headers = firstLine.split(',').map(h => h.trim().replace(/['"]/g, ''));
+        
+        console.log('CSV Headers detected:', headers);
+        
+        // Improved column mapping with exact matching first, then fuzzy matching
+        const columnMap = {};
+        
+        headers.forEach((header, index) => {
+            const cleanHeader = header.toLowerCase().trim();
             
-            if (!file) {
-                alert('Please select a CSV file first.');
-                return;
+            // Exact matches first
+            if (cleanHeader === 'id') {
+                columnMap.id = index;
+            } else if (cleanHeader === 'name') {
+                columnMap.name = index;
+            } else if (cleanHeader === 'grade') {
+                columnMap.grade = index;
+            } else if (cleanHeader === 'class') {
+                columnMap.class = index;
+            }
+            // Fuzzy matches as fallback
+            else if (cleanHeader.includes('id') && !columnMap.id) {
+                columnMap.id = index;
+            } else if (cleanHeader.includes('name') && !columnMap.name) {
+                columnMap.name = index;
+            } else if (cleanHeader.includes('grade') && !columnMap.grade) {
+                columnMap.grade = index;
+            } else if ((cleanHeader.includes('class') || cleanHeader.includes('room')) && !columnMap.class) {
+                columnMap.class = index;
+            }
+        });
+        
+        console.log('Column mapping detected:', columnMap);
+        console.log('Headers array:', headers);
+        
+        // Verify we found all required columns
+        if (columnMap.id === undefined || columnMap.name === undefined || columnMap.grade === undefined) {
+            const missingFields = [];
+            if (columnMap.id === undefined) missingFields.push('id');
+            if (columnMap.name === undefined) missingFields.push('name');
+            if (columnMap.grade === undefined) missingFields.push('grade');
+            
+            alert(`Could not find required columns: ${missingFields.join(', ')}\n\nYour CSV headers: ${headers.join(', ')}\n\nExpected: id, name, grade, class (in any order)`);
+            return;
+        }
+        
+        // Process data rows (skip header)
+        for (let i = 1; i < lines.length; i++) {
+            const line = lines[i].trim();
+            if (!line) continue;
+            
+            // Better CSV parsing - handle quoted values with commas
+            const parts = [];
+            let current = '';
+            let inQuotes = false;
+            
+            for (let j = 0; j < line.length; j++) {
+                const char = line[j];
+                if (char === '"') {
+                    inQuotes = !inQuotes;
+                } else if (char === ',' && !inQuotes) {
+                    parts.push(current.trim().replace(/^"|"$/g, ''));
+                    current = '';
+                } else {
+                    current += char;
+                }
+            }
+            parts.push(current.trim().replace(/^"|"$/g, '')); // Add final part
+            
+            console.log(`Line ${i}: ${parts}`); // Debug logging
+            
+            if (parts.length < Math.max(columnMap.id, columnMap.name, columnMap.grade) + 1) {
+                errors.push(`Line ${i + 1}: Not enough columns (found ${parts.length}, need ${Math.max(columnMap.id, columnMap.name, columnMap.grade) + 1})`);
+                continue;
             }
             
-            if (!file.name.toLowerCase().endsWith('.csv')) {
-                alert('Please select a valid CSV file.');
-                return;
+            const id = parts[columnMap.id]?.toString().trim();
+            const name = parts[columnMap.name]?.toString().trim();
+            const grade = parts[columnMap.grade]?.toString().trim();
+            const className = columnMap.class !== undefined ? parts[columnMap.class]?.toString().trim() : 'Unassigned';
+            
+            console.log(`Mapped data - ID: "${id}", Name: "${name}", Grade: "${grade}", Class: "${className}"`); // Debug
+            
+            if (!id || !name || !grade) {
+                errors.push(`Line ${i + 1}: Missing required data (id: "${id}", name: "${name}", grade: "${grade}")`);
+                continue;
             }
             
-            try {
-                const text = await file.text();
-                const lines = text.split('\n').filter(line => line.trim());
-                
-                if (lines.length === 0) {
-                    alert('The CSV file appears to be empty.');
-                    return;
-                }
-                
-                const newStudents = [];
-                const errors = [];
-                
-                const firstLine = lines[0].toLowerCase().replace(/['"]/g, '');
-                const headers = firstLine.split(',').map(h => h.trim());
-                
-                console.log('CSV Headers detected:', headers);
-                
-                const columnMap = {};
-                headers.forEach((header, index) => {
-                    if (header.includes('id') || header === 'student_id' || header === 'studentid') {
-                        columnMap.id = index;
-                    } else if (header.includes('name') || header === 'student_name' || header === 'studentname') {
-                        columnMap.name = index;
-                    } else if (header.includes('grade') || header === 'student_grade' || header === 'level') {
-                        columnMap.grade = index;
-                    } else if (header.includes('class') || header === 'classroom' || header === 'room') {
-                        columnMap.class = index;
-                    }
-                });
-                
-                console.log('Column mapping:', columnMap);
-                
-                if (columnMap.id === undefined || columnMap.name === undefined || columnMap.grade === undefined) {
-                    const missingFields = [];
-                    if (columnMap.id === undefined) missingFields.push('id');
-                    if (columnMap.name === undefined) missingFields.push('name');
-                    if (columnMap.grade === undefined) missingFields.push('grade');
-                    
-                    alert(`Could not find required columns: ${missingFields.join(', ')}\n\nYour CSV headers: ${headers.join(', ')}\n\nExpected headers should contain: id, name, grade (class is optional)`);
-                    return;
-                }
-                
-                for (let i = 1; i < lines.length; i++) {
-                    const line = lines[i].trim();
-                    if (!line) continue;
-                    
-                    const parts = line.split(',').map(part => part.trim().replace(/^"|"$/g, ''));
-                    
-                    if (parts.length < Math.max(columnMap.id, columnMap.name, columnMap.grade) + 1) {
-                        errors.push(`Line ${i + 1}: Not enough columns for mapped fields`);
-                        continue;
-                    }
-                    
-                    const id = parts[columnMap.id];
-                    const name = parts[columnMap.name];
-                    const grade = parts[columnMap.grade];
-                    const className = columnMap.class !== undefined ? parts[columnMap.class] : 'Unassigned';
-                    
-                    if (!id || !name || !grade) {
-                        errors.push(`Line ${i + 1}: Missing required data (id: "${id}", name: "${name}", grade: "${grade}")`);
-                        continue;
-                    }
-                    
-                    if (students.find(s => s.id === id) || newStudents.find(s => s.id === id)) {
-                        errors.push(`Line ${i + 1}: Student ID "${id}" already exists`);
-                        continue;
-                    }
-                    
-                    newStudents.push({
-                        id: id,
-                        name: name,
-                        grade: grade,
-                        class: className || 'Unassigned'
-                    });
-                }
-                
-                if (errors.length > 0) {
-                    const proceed = confirm(`Found ${errors.length} error(s):\n\n${errors.slice(0, 5).join('\n')}${errors.length > 5 ? '\n...' : ''}\n\nDo you want to add the ${newStudents.length} valid students?`);
-                    
-                    if (!proceed) {
-                        return;
-                    }
-                }
-                
-                if (newStudents.length === 0) {
-                    alert('No valid students found in the CSV file.');
-                    return;
-                }
-                
-                if (db) {
-                    try {
-                        const batch = db.batch();
-                        newStudents.forEach(student => {
-                            const docRef = db.collection('students').doc(student.id);
-                            batch.set(docRef, {
-                                name: student.name,
-                                grade: student.grade,
-                                class: student.class
-                            });
-                        });
-                        await batch.commit();
-                        console.log('Students saved to Firebase via batch');
-                    } catch (error) {
-                        console.error('Error saving students to Firebase:', error);
-                        alert('Students added locally, but could not save to Firebase. Check your connection.');
-                    }
-                }
-                
-                students.push(...newStudents);
-                
-                updateStudentList();
-                updateDashboardStats();
-                populateFilterOptions();
-                
-                fileInput.value = '';
-                
-                alert(`Successfully added ${newStudents.length} student(s)!${errors.length > 0 ? `\n(${errors.length} lines had errors and were skipped)` : ''}`);
-                
-            } catch (error) {
-                console.error('Error reading CSV file:', error);
-                alert('Error reading the CSV file. Please make sure it\'s a valid CSV format.');
+            // Check if student ID already exists
+            if (students.find(s => s.id === id) || newStudents.find(s => s.id === id)) {
+                errors.push(`Line ${i + 1}: Student ID "${id}" already exists`);
+                continue;
+            }
+            
+            newStudents.push({
+                id: id,
+                name: name,
+                grade: grade,
+                class: className || 'Unassigned'
+            });
+        }
+        
+        console.log('Processed students:', newStudents); // Debug
+        
+        if (errors.length > 0) {
+            console.log('Errors found:', errors);
+            const proceed = confirm(`Found ${errors.length} error(s):\n\n${errors.slice(0, 5).join('\n')}${errors.length > 5 ? '\n...' : ''}\n\nDo you want to add the ${newStudents.length} valid students?`);
+            
+            if (!proceed) {
+                return;
             }
         }
+        
+        if (newStudents.length === 0) {
+            alert('No valid students found in the CSV file.');
+            return;
+        }
+        
+        // Add students to Firebase if connected
+        if (db) {
+            try {
+                const batch = db.batch();
+                newStudents.forEach(student => {
+                    const docRef = db.collection('students').doc(student.id);
+                    batch.set(docRef, {
+                        name: student.name,
+                        grade: student.grade,
+                        class: student.class
+                    });
+                });
+                await batch.commit();
+                console.log('Students saved to Firebase via batch');
+            } catch (error) {
+                console.error('Error saving students to Firebase:', error);
+                alert('Students added locally, but could not save to Firebase. Check your connection.');
+            }
+        }
+        
+        // Add to local array
+        students.push(...newStudents);
+        
+        // Update UI
+        updateStudentList();
+        updateDashboardStats();
+        populateFilterOptions();
+        
+        // Clear file input
+        fileInput.value = '';
+        
+        alert(`Successfully added ${newStudents.length} student(s)!${errors.length > 0 ? `\n(${errors.length} lines had errors and were skipped)` : ''}`);
+        
+    } catch (error) {
+        console.error('Error reading CSV file:', error);
+        alert('Error reading the CSV file. Please make sure it\'s a valid CSV format.');
+    }
+}
 
         function downloadSampleCSV() {
             const csvContent = `id,name,grade,class
