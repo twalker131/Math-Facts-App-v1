@@ -888,7 +888,7 @@
             
             if (isCorrect) {
                 showFeedback(true, currentProblem.answer);
-                setTimeout(nextProblem, 500);
+                setTimeout(nextProblem, 1000); // Reduced from 2000ms to 1000ms (1 second)
             } else {
                 showVisualFeedback(currentProblem, userAnswer);
             }
