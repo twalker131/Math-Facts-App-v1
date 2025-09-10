@@ -1072,16 +1072,23 @@
             try {
                 console.log('Loading real progress for student:', studentId);
                 
-                // Get all problem attempts for this student
+                // Get all problem attempts for this student (simpler query without orderBy to avoid index issues)
                 const snapshot = await db.collection('problemAttempts')
                     .where('studentId', '==', studentId)
-                    .orderBy('timestamp', 'desc')
                     .get();
                 
                 const attempts = [];
                 snapshot.forEach(doc => {
-                    attempts.push(doc.data());
+                    const data = doc.data();
+                    // Convert Firestore timestamp to JavaScript Date
+                    if (data.timestamp && data.timestamp.toDate) {
+                        data.timestamp = data.timestamp.toDate();
+                    }
+                    attempts.push(data);
                 });
+                
+                // Sort by timestamp in JavaScript instead of Firestore
+                attempts.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
                 
                 console.log('Found', attempts.length, 'problem attempts');
                 
@@ -1120,9 +1127,9 @@
                     }
                 });
                 
-                // Find most difficult problems (highest error rate, minimum 3 attempts)
+                // Find most difficult problems (highest error rate, minimum 2 attempts)
                 const difficultProblems = Object.entries(problemStats)
-                    .filter(([problem, stats]) => stats.total >= 3)
+                    .filter(([problem, stats]) => stats.total >= 2)
                     .map(([problem, stats]) => ({
                         problem,
                         errorRate: ((stats.errors / stats.total) * 100).toFixed(1),
@@ -1145,7 +1152,7 @@
                         </div>
                     `).join('');
                 } else {
-                    document.getElementById('errorPatterns').innerHTML = '<div style="text-align: center; padding: 20px; color: #666;">Not enough data yet to identify error patterns. Student needs more practice!</div>';
+                    document.getElementById('errorPatterns').innerHTML = '<div style="text-align: center; padding: 20px; color: #666;">Not enough repeated problems yet to identify error patterns.</div>';
                 }
                 
                 // Display recent problems (last 25)
@@ -1169,7 +1176,7 @@
                                     <td class="${attempt.isCorrect ? 'correct-answer' : 'incorrect-answer'}">${attempt.studentAnswer}</td>
                                     <td>${attempt.correctAnswer}</td>
                                     <td>${attempt.isCorrect ? 'Correct' : 'Wrong'}</td>
-                                    <td class="timestamp">${new Date(attempt.timestamp.toDate()).toLocaleString()}</td>
+                                    <td class="timestamp">${new Date(attempt.timestamp).toLocaleString()}</td>
                                 </tr>
                             `).join('')}
                         </tbody>
@@ -1178,8 +1185,25 @@
                 
             } catch (error) {
                 console.error('Error loading student progress:', error);
-                // Fall back to sample data if there's an error
-                generateSampleAnalytics({ id: studentId });
+                console.error('Full error details:', error.message);
+                
+                // Show error message instead of falling back to sample data
+                document.getElementById('studentMastery').textContent = 'Error';
+                document.getElementById('factsPracticed').textContent = 'Error';
+                document.getElementById('totalMistakes').textContent = 'Error';
+                
+                document.getElementById('errorPatterns').innerHTML = `
+                    <div style="text-align: center; padding: 20px; color: #f44336;">
+                        <strong>Error loading student data:</strong><br>
+                        ${error.message}<br><br>
+                        Check the browser console for more details.
+                    </div>
+                `;
+                document.getElementById('recentProblems').innerHTML = `
+                    <div style="text-align: center; padding: 20px; color: #f44336;">
+                        Unable to load problem history. Check console for error details.
+                    </div>
+                `;
             }
         }
 
