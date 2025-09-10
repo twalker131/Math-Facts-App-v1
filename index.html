@@ -1299,6 +1299,8 @@
             document.body.removeChild(a);
             window.URL.revokeObjectURL(url);
         }
+
+        function addSampleStudents() {
             const sampleStudents = [
                 { id: '001', name: 'Alice Johnson', grade: '3', class: 'Math-3A' },
                 { id: '002', name: 'Bob Smith', grade: '3', class: 'Math-3A' },
@@ -1308,18 +1310,26 @@
             ];
             
             if (confirm('Add 5 sample students for testing? This will add test students with IDs 001-005.')) {
+                let addedCount = 0;
+                
                 sampleStudents.forEach(student => {
+                    // Check if student already exists
                     if (!students.find(s => s.id === student.id)) {
                         students.push(student);
+                        addedCount++;
                     }
                 });
                 
-                updateStudentList();
-                updateDashboardStats();
-                populateFilterOptions();
-                alert('Sample students added!');
+                if (addedCount > 0) {
+                    updateStudentList();
+                    updateDashboardStats();
+                    populateFilterOptions();
+                    alert(`Added ${addedCount} sample student(s)!`);
+                } else {
+                    alert('All sample students already exist in the system.');
+                }
             }
-        
+        }
 
         function clearAllStudents() {
             if (confirm('Are you sure you want to delete ALL students? This cannot be undone.')) {
