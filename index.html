@@ -1,4 +1,757 @@
-if (operation === '+') {
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Math Facts Tracker</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+        }
+        .status {
+            margin: 20px 0;
+            padding: 10px;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .status.connected {
+            background: #e8f5e8;
+            color: #2e7d32;
+            border: 1px solid #4caf50;
+        }
+        .status.connecting {
+            background: #fff3e0;
+            color: #f57f17;
+            border: 1px solid #ff9800;
+        }
+        .status.local {
+            background: #fce4ec;
+            color: #c2185b;
+            border: 1px solid #e91e63;
+        }
+        input[type="text"], input[type="number"], input[type="password"] {
+            padding: 15px;
+            font-size: 18px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            width: 200px;
+            margin: 10px;
+            text-align: center;
+        }
+        button {
+            padding: 15px 25px;
+            font-size: 18px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 10px;
+            font-weight: bold;
+        }
+        .btn-primary {
+            background: #2196f3;
+            color: white;
+        }
+        .btn-success {
+            background: #4caf50;
+            color: white;
+        }
+        .btn-secondary {
+            background: #757575;
+            color: white;
+        }
+        .btn-warning {
+            background: #ff9800;
+            color: white;
+        }
+        button:hover {
+            opacity: 0.9;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .problem {
+            font-size: 4em;
+            margin: 30px 0;
+            color: #333;
+            font-weight: bold;
+        }
+        .feedback {
+            font-size: 2em;
+            margin: 20px 0;
+            font-weight: bold;
+        }
+        .feedback.correct {
+            color: #4caf50;
+        }
+        .feedback.incorrect {
+            color: #f44336;
+        }
+        
+        /* Visual Feedback Modal */
+        .feedback-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .feedback-content {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            max-width: 600px;
+            width: 90%;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+        
+        .feedback-title {
+            font-size: 1.8em;
+            color: #f44336;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+        
+        .visual-explanation {
+            margin: 30px 0;
+            padding: 20px;
+            background: #f9f9f9;
+            border-radius: 10px;
+            border: 2px solid #e0e0e0;
+        }
+        
+        .math-step {
+            margin: 15px 0;
+            font-size: 1.4em;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .visual-blocks {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 20px 0;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .block-group {
+            text-align: center;
+        }
+        
+        .block-label {
+            font-size: 0.9em;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        
+        .blocks {
+            display: inline-flex;
+            flex-wrap: wrap;
+            max-width: 150px;
+            gap: 2px;
+        }
+        
+        .block {
+            width: 12px;
+            height: 12px;
+            border: 1px solid #333;
+            margin: 1px;
+        }
+        
+        .block.positive {
+            background: #4caf50;
+        }
+        
+        .block.negative {
+            background: #f44336;
+        }
+        
+        .operation-symbol {
+            font-size: 2em;
+            margin: 0 15px;
+            color: #333;
+            font-weight: bold;
+        }
+        
+        .student-list {
+            text-align: left;
+            max-height: 300px;
+            overflow-y: auto;
+            margin: 20px 0;
+        }
+        .student-item {
+            padding: 10px;
+            border: 1px solid #ddd;
+            margin: 5px 0;
+            border-radius: 5px;
+            cursor: pointer;
+            background: #f9f9f9;
+        }
+        .student-item:hover {
+            background: #e3f2fd;
+        }
+        .student-item.selected {
+            background: #bbdefb;
+            border-color: #2196f3;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .card {
+            background: #f5f5f5;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        .card h3 {
+            margin: 0 0 10px 0;
+            color: #333;
+        }
+        .card .number {
+            font-size: 2em;
+            font-weight: bold;
+            color: #2196f3;
+        }
+        .hidden {
+            display: none;
+        }
+        
+        /* Student Detail Sections */
+        .student-detail-section {
+            margin: 30px 0;
+            padding: 20px;
+            background: #f9f9f9;
+            border-radius: 10px;
+            border: 1px solid #e0e0e0;
+        }
+        
+        .student-detail-section h3 {
+            margin: 0 0 15px 0;
+            color: #333;
+            border-bottom: 2px solid #2196f3;
+            padding-bottom: 5px;
+        }
+        
+        .error-patterns {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        
+        .pattern-card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            text-align: center;
+        }
+        
+        .pattern-problem {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #f44336;
+            margin-bottom: 10px;
+        }
+        
+        .pattern-stats {
+            font-size: 0.9em;
+            color: #666;
+        }
+        
+        .recent-problems {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .problem-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .problem-table th {
+            background: #2196f3;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: bold;
+        }
+        
+        .problem-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .problem-table tr:hover {
+            background: #f5f5f5;
+        }
+        
+        .correct-answer {
+            color: #4caf50;
+            font-weight: bold;
+        }
+        
+        .incorrect-answer {
+            color: #f44336;
+            font-weight: bold;
+        }
+        
+        .timestamp {
+            font-size: 0.8em;
+            color: #666;
+        }
+
+        .login-error {
+            color: #f44336;
+            margin-top: 10px;
+            font-weight: bold;
+            padding: 10px;
+            background: #ffebee;
+            border-radius: 5px;
+            border: 1px solid #f44336;
+        }
+
+        /* Filters Section Styles */
+        .filters-section {
+            margin: 30px 0;
+            padding: 20px;
+            background: #f9f9f9;
+            border-radius: 10px;
+            border: 1px solid #e0e0e0;
+        }
+
+        .filters-section h3 {
+            margin: 0 0 20px 0;
+            color: #333;
+            border-bottom: 2px solid #2196f3;
+            padding-bottom: 5px;
+        }
+
+        .filters-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .filter-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+
+        .filter-group select {
+            width: 100%;
+            padding: 8px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Math Facts Tracker</h1>
+        
+        <!-- Status Indicator -->
+        <div id="status" class="status connecting">
+            Connecting to Firebase...
+        </div>
+        
+        <!-- Login Screen -->
+        <div id="loginScreen">
+            <h2>Student Login</h2>
+            <input type="text" id="studentId" placeholder="Enter Student ID" />
+            <br>
+            <button class="btn-primary" onclick="studentLogin()">Start Practice</button>
+            <br><br>
+            <button class="btn-success" onclick="showTeacherLogin()">Teacher Dashboard</button>
+        </div>
+        
+        <!-- Teacher Login Screen -->
+        <div id="teacherLoginScreen" class="hidden">
+            <h2>Teacher Login</h2>
+            <p>Enter the teacher password to access the dashboard</p>
+            <input type="password" id="teacherPassword" placeholder="Teacher Password" />
+            <br>
+            <button class="btn-primary" onclick="teacherLogin()">Login</button>
+            <br><br>
+            <button class="btn-secondary" onclick="backToMainLogin()">Back</button>
+            <div id="loginError" class="login-error hidden">
+                Incorrect password. Please try again.
+            </div>
+        </div>
+        
+        <!-- Student Practice Screen -->
+        <div id="practiceScreen" class="hidden">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h2 id="studentWelcome"></h2>
+                    <p id="studentScore">Score: 0/0</p>
+                </div>
+                <button class="btn-secondary" onclick="logout()">Logout</button>
+            </div>
+            
+            <div id="problemArea">
+                <div class="problem" id="problem"></div>
+                <input type="number" id="answer" placeholder="?" style="font-size: 2em; width: 150px;" />
+                <br>
+                <button class="btn-primary" onclick="submitAnswer()">Submit Answer</button>
+            </div>
+            
+            <div id="feedback" class="feedback hidden"></div>
+        </div>
+        
+        <!-- Visual Feedback Modal -->
+        <div id="feedbackModal" class="feedback-modal hidden">
+            <div class="feedback-content">
+                <div class="feedback-title">Let's work through this together!</div>
+                <div class="visual-explanation">
+                    <div id="visualProblem" class="math-step"></div>
+                    <div id="visualSolution"></div>
+                </div>
+                <button class="btn-success" onclick="closeFeedbackModal()">OK, I understand!</button>
+            </div>
+        </div>
+        
+        <!-- Teacher Dashboard -->
+        <div id="teacherScreen" class="hidden">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h2>Teacher Dashboard</h2>
+                <button class="btn-secondary" onclick="logout()">Back to Login</button>
+            </div>
+            
+            <div class="grid">
+                <div class="card">
+                    <h3>Total Students</h3>
+                    <div class="number" id="totalStudents">0</div>
+                </div>
+                <div class="card">
+                    <h3>Average Mastery</h3>
+                    <div class="number" id="averageMastery">0%</div>
+                </div>
+                <div class="card">
+                    <h3>Active Today</h3>
+                    <div class="number" id="activeToday">0</div>
+                </div>
+            </div>
+            
+            <!-- Class Mastery Overview -->
+            <h3>Class Performance Overview</h3>
+            <div id="classMasteryOverview" class="grid" style="margin-bottom: 30px;">
+                <!-- Class mastery cards will be populated here -->
+            </div>
+            
+            <h3>Add Students</h3>
+            
+            <!-- Single Student Entry -->
+            <div style="margin-bottom: 20px;">
+                <h4>Add Single Student</h4>
+                <input type="text" id="newStudentId" placeholder="Student ID" />
+                <input type="text" id="newStudentName" placeholder="Name" />
+                <input type="text" id="newStudentGrade" placeholder="Grade" />
+                <input type="text" id="newStudentClass" placeholder="Class" />
+                <button class="btn-primary" onclick="addStudent()">Add Student</button>
+            </div>
+            
+            <!-- CSV Upload -->
+            <div style="margin-bottom: 20px; padding: 20px; background: #f0f8ff; border-radius: 10px; border: 2px dashed #2196f3;">
+                <h4>Upload Students via CSV</h4>
+                <p style="margin: 10px 0; color: #666; font-size: 14px;">
+                    CSV should have columns: <strong>id, name, grade, class</strong><br>
+                    Example: 001,Alice Johnson,3,Math-3A
+                </p>
+                <input type="file" id="csvFileInput" accept=".csv" style="margin: 10px 0;" />
+                <br>
+                <button class="btn-success" onclick="uploadCSV()">Upload CSV</button>
+                <button class="btn-secondary" onclick="downloadSampleCSV()" style="margin-left: 10px;">Download Sample CSV</button>
+            </div>
+            
+            <div style="margin: 20px 0;">
+                <button class="btn-warning" onclick="addSampleStudents()" style="margin-right: 10px;">Add Sample Students</button>
+                <button class="btn-secondary" onclick="clearAllStudents()">Clear All Students</button>
+            </div>
+            
+            <!-- Smart Filters Section -->
+            <div class="filters-section">
+                <h3>Smart Filters</h3>
+                <div class="filters-grid">
+                    <div class="filter-group">
+                        <label for="classFilter">Filter by Class:</label>
+                        <select id="classFilter" onchange="applyFilters()">
+                            <option value="">All Classes</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label for="gradeFilter">Filter by Grade:</label>
+                        <select id="gradeFilter" onchange="applyFilters()">
+                            <option value="">All Grades</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label for="patternFilter">Filter by Problem Pattern:</label>
+                        <select id="patternFilter" onchange="applyFilters()">
+                            <option value="">All Patterns</option>
+                            <option value="pos_plus_pos">A + B (Positive + Positive)</option>
+                            <option value="pos_plus_neg">A + (-B) (Positive + Negative)</option>
+                            <option value="pos_minus_pos">A - B (Positive - Positive)</option>
+                            <option value="pos_minus_neg">A - (-B) (Positive - Negative)</option>
+                            <option value="neg_plus_pos">(-A) + B (Negative + Positive)</option>
+                            <option value="neg_plus_neg">(-A) + (-B) (Negative + Negative)</option>
+                            <option value="neg_minus_pos">(-A) - B (Negative - Positive)</option>
+                            <option value="neg_minus_neg">(-A) - (-B) (Negative - Negative)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label for="errorThreshold">Min Error Rate (%):</label>
+                        <select id="errorThreshold" onchange="applyFilters()">
+                            <option value="0">Any Error Rate</option>
+                            <option value="25">25%+ Errors</option>
+                            <option value="50">50%+ Errors</option>
+                            <option value="75">75%+ Errors</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                    <button class="btn-warning" onclick="clearAllFilters()" style="padding: 10px 20px;">Clear All Filters</button>
+                    <div id="filterResults" style="font-weight: bold; color: #555;">Showing all students</div>
+                </div>
+            </div>
+            
+            <h3>Students</h3>
+            <div class="student-list" id="studentList"></div>
+            
+            <div id="studentProgress" class="hidden">
+                <h3 id="progressTitle"></h3>
+                <div class="grid">
+                    <div class="card">
+                        <h3>Mastery %</h3>
+                        <div class="number" id="studentMastery">0%</div>
+                    </div>
+                    <div class="card">
+                        <h3>Facts Practiced</h3>
+                        <div class="number" id="factsPracticed">0</div>
+                    </div>
+                    <div class="card">
+                        <h3>Total Mistakes</h3>
+                        <div class="number" id="totalMistakes">0</div>
+                    </div>
+                </div>
+                
+                <!-- Error Patterns Section -->
+                <div class="student-detail-section">
+                    <h3>Problem Analysis</h3>
+                    <div id="errorPatterns" class="error-patterns"></div>
+                </div>
+                
+                <!-- Recent Problems Section -->
+                <div class="student-detail-section">
+                    <h3>Last 25 Problems</h3>
+                    <div id="recentProblems" class="recent-problems"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script>
+        // Application State
+        const TEACHER_PASSWORD = "MathTeacher2024!";
+        let db = null;
+        let currentUser = null;
+        let currentProblem = null;
+        let score = { correct: 0, total: 0 };
+        let students = [];
+        
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyDc850NX40XMBTwcypsRy_1zNIm-dMqCzw",
+            authDomain: "math-facts-app-v1.firebaseapp.com",
+            projectId: "math-facts-app-v1",
+            storageBucket: "math-facts-app-v1.firebasestorage.app",
+            messagingSenderId: "797235830684",
+            appId: "1:797235830684:web:e7c569649fedf456733259",
+            measurementId: "G-MYV10DWB5M"
+        };
+
+        // Utility Functions
+        function updateStatus(type, message) {
+            const statusEl = document.getElementById('status');
+            statusEl.className = `status ${type}`;
+            statusEl.textContent = message;
+        }
+
+        function showScreen(screenId) {
+            const screens = ['loginScreen', 'teacherLoginScreen', 'practiceScreen', 'teacherScreen'];
+            screens.forEach(screen => {
+                document.getElementById(screen).classList.add('hidden');
+            });
+            document.getElementById(screenId).classList.remove('hidden');
+        }
+
+        // Firebase Functions
+        function initFirebase() {
+            console.log('Starting Firebase initialization...');
+            try {
+                if (typeof firebase !== 'undefined') {
+                    firebase.initializeApp(firebaseConfig);
+                    db = firebase.firestore();
+                    console.log('Firebase initialized successfully');
+                    updateStatus('connected', 'Connected to Firebase');
+                    loadStudentsFromFirebase();
+                } else {
+                    console.log('Firebase not available, running in local mode');
+                    updateStatus('local', 'Running in local mode');
+                    db = null;
+                }
+            } catch (error) {
+                console.error('Firebase initialization failed:', error);
+                updateStatus('local', 'Running in local mode');
+                db = null;
+            }
+        }
+
+        async function loadStudentsFromFirebase() {
+            if (!db) return;
+            
+            try {
+                console.log('Attempting to load students from Firebase...');
+                const snapshot = await db.collection('students').get();
+                const firebaseStudents = [];
+                
+                snapshot.forEach(doc => {
+                    console.log('Found student document:', doc.id, doc.data());
+                    firebaseStudents.push({ id: doc.id, ...doc.data() });
+                });
+                
+                console.log('Total students loaded from Firebase:', firebaseStudents.length);
+                
+                if (firebaseStudents.length > 0) {
+                    students = firebaseStudents;
+                    updateStudentList();
+                    updateDashboardStats();
+                    populateFilterOptions();
+                } else {
+                    console.log('No students found in Firebase collection');
+                }
+            } catch (error) {
+                console.error('Error loading students from Firebase:', error);
+            }
+        }
+
+        // Calculate category-based mastery system
+        function calculateCategoryMastery(attempts) {
+            const categories = {
+                'pos_plus_pos': 'Positive + Positive',
+                'pos_plus_neg': 'Positive + Negative', 
+                'pos_minus_pos': 'Positive - Positive',
+                'pos_minus_neg': 'Positive - Negative',
+                'neg_plus_pos': 'Negative + Positive',
+                'neg_plus_neg': 'Negative + Negative',
+                'neg_minus_pos': 'Negative - Positive',
+                'neg_minus_neg': 'Negative - Negative'
+            };
+            
+            const categoryAttempts = {};
+            Object.keys(categories).forEach(category => {
+                categoryAttempts[category] = [];
+            });
+            
+            attempts.forEach(attempt => {
+                const category = categorizeProblem(attempt.problem);
+                if (category && categoryAttempts[category]) {
+                    categoryAttempts[category].push(attempt);
+                }
+            });
+            
+            let masteredCategories = 0;
+            const categoryDetails = {};
+            
+            Object.keys(categories).forEach(categoryKey => {
+                const categoryAttemptsList = categoryAttempts[categoryKey];
+                
+                const recentAttempts = categoryAttemptsList
+                    .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+                    .slice(0, 5);
+                
+                const correctCount = recentAttempts.filter(a => a.isCorrect).length;
+                const totalCount = recentAttempts.length;
+                const isMastered = totalCount >= 5 && correctCount === 5;
+                
+                if (isMastered) {
+                    masteredCategories++;
+                }
+                
+                categoryDetails[categoryKey] = {
+                    name: categories[categoryKey],
+                    correct: correctCount,
+                    total: totalCount,
+                    mastered: isMastered,
+                    percentage: totalCount > 0 ? ((correctCount / totalCount) * 100).toFixed(1) : 0
+                };
+            });
+            
+            const overallMastery = ((masteredCategories / 8) * 100).toFixed(1);
+            
+            return {
+                percentage: overallMastery,
+                masteredCategories,
+                totalCategories: 8,
+                categoryDetails
+            };
+        }
+
+        function categorizeProblem(problemString) {
+            const parts = problemString.trim().split(/\s+/);
+            if (parts.length !== 3) return null;
+            
+            const num1 = parseInt(parts[0]);
+            const operation = parts[1];
+            const num2 = parseInt(parts[2]);
+            
+            if (isNaN(num1) || isNaN(num2)) return null;
+            
+            const num1Positive = num1 >= 0;
+            const num2Positive = num2 >= 0;
+            
+            if (operation === '+') {
                 if (num1Positive && num2Positive) return 'pos_plus_pos';
                 if (num1Positive && !num2Positive) return 'pos_plus_neg';
                 if (!num1Positive && num2Positive) return 'neg_plus_pos';
@@ -124,7 +877,6 @@ if (operation === '+') {
             }
             
             updateScore();
-            updateLiveMastery(); // Update real-time mastery after each problem
             
             if (isCorrect) {
                 showFeedback(true, currentProblem.answer);
@@ -136,44 +888,6 @@ if (operation === '+') {
 
         function updateScore() {
             document.getElementById('studentScore').textContent = `Score: ${score.correct}/${score.total}`;
-        }
-
-        // Live Mastery Update Function
-        async function updateLiveMastery() {
-            if (!currentUser || !db) {
-                document.getElementById('liveMastery').textContent = 'N/A';
-                document.getElementById('livePracticed').textContent = 'N/A';
-                document.getElementById('liveCorrect').textContent = 'N/A';
-                document.getElementById('liveSession').textContent = `${score.correct}/${score.total}`;
-                return;
-            }
-            
-            try {
-                const snapshot = await db.collection('problemAttempts')
-                    .where('studentId', '==', currentUser.id)
-                    .get();
-                
-                const attempts = [];
-                snapshot.forEach(doc => {
-                    const data = doc.data();
-                    if (data.timestamp && data.timestamp.toDate) {
-                        data.timestamp = data.timestamp.toDate();
-                    }
-                    attempts.push(data);
-                });
-                
-                const totalAttempts = attempts.length;
-                const correctAttempts = attempts.filter(a => a.isCorrect).length;
-                const masteryResults = calculateCategoryMastery(attempts);
-                
-                document.getElementById('liveMastery').textContent = masteryResults.percentage + '%';
-                document.getElementById('livePracticed').textContent = totalAttempts;
-                document.getElementById('liveCorrect').textContent = correctAttempts;
-                document.getElementById('liveSession').textContent = `${score.correct}/${score.total}`;
-                
-            } catch (error) {
-                console.error('Error updating live mastery:', error);
-            }
         }
 
         function showFeedback(isCorrect, correctAnswer) {
@@ -432,191 +1146,192 @@ if (operation === '+') {
             }
         }
 
-        // Improved CSV Upload Functions
-        async function uploadCSV() {
-            const fileInput = document.getElementById('csvFileInput');
-            const file = fileInput.files[0];
+        // CSV Upload Functions
+// Fixed CSV Upload Function - Replace the existing uploadCSV function with this
+async function uploadCSV() {
+    const fileInput = document.getElementById('csvFileInput');
+    const file = fileInput.files[0];
+    
+    if (!file) {
+        alert('Please select a CSV file first.');
+        return;
+    }
+    
+    if (!file.name.toLowerCase().endsWith('.csv')) {
+        alert('Please select a valid CSV file.');
+        return;
+    }
+    
+    try {
+        const text = await file.text();
+        const lines = text.split('\n').filter(line => line.trim());
+        
+        if (lines.length === 0) {
+            alert('The CSV file appears to be empty.');
+            return;
+        }
+        
+        const newStudents = [];
+        const errors = [];
+        
+        // Parse header to map columns correctly - more robust detection
+        const firstLine = lines[0].toLowerCase().trim();
+        const headers = firstLine.split(',').map(h => h.trim().replace(/['"]/g, ''));
+        
+        console.log('CSV Headers detected:', headers);
+        
+        // Improved column mapping with exact matching first, then fuzzy matching
+        const columnMap = {};
+        
+        headers.forEach((header, index) => {
+            const cleanHeader = header.toLowerCase().trim();
             
-            if (!file) {
-                alert('Please select a CSV file first.');
-                return;
+            // Exact matches first
+            if (cleanHeader === 'id') {
+                columnMap.id = index;
+            } else if (cleanHeader === 'name') {
+                columnMap.name = index;
+            } else if (cleanHeader === 'grade') {
+                columnMap.grade = index;
+            } else if (cleanHeader === 'class') {
+                columnMap.class = index;
+            }
+            // Fuzzy matches as fallback
+            else if (cleanHeader.includes('id') && !columnMap.id) {
+                columnMap.id = index;
+            } else if (cleanHeader.includes('name') && !columnMap.name) {
+                columnMap.name = index;
+            } else if (cleanHeader.includes('grade') && !columnMap.grade) {
+                columnMap.grade = index;
+            } else if ((cleanHeader.includes('class') || cleanHeader.includes('room')) && !columnMap.class) {
+                columnMap.class = index;
+            }
+        });
+        
+        console.log('Column mapping detected:', columnMap);
+        console.log('Headers array:', headers);
+        
+        // Verify we found all required columns
+        if (columnMap.id === undefined || columnMap.name === undefined || columnMap.grade === undefined) {
+            const missingFields = [];
+            if (columnMap.id === undefined) missingFields.push('id');
+            if (columnMap.name === undefined) missingFields.push('name');
+            if (columnMap.grade === undefined) missingFields.push('grade');
+            
+            alert(`Could not find required columns: ${missingFields.join(', ')}\n\nYour CSV headers: ${headers.join(', ')}\n\nExpected: id, name, grade, class (in any order)`);
+            return;
+        }
+        
+        // Process data rows (skip header)
+        for (let i = 1; i < lines.length; i++) {
+            const line = lines[i].trim();
+            if (!line) continue;
+            
+            // Better CSV parsing - handle quoted values with commas
+            const parts = [];
+            let current = '';
+            let inQuotes = false;
+            
+            for (let j = 0; j < line.length; j++) {
+                const char = line[j];
+                if (char === '"') {
+                    inQuotes = !inQuotes;
+                } else if (char === ',' && !inQuotes) {
+                    parts.push(current.trim().replace(/^"|"$/g, ''));
+                    current = '';
+                } else {
+                    current += char;
+                }
+            }
+            parts.push(current.trim().replace(/^"|"$/g, '')); // Add final part
+            
+            console.log(`Line ${i}: ${parts}`); // Debug logging
+            
+            if (parts.length < Math.max(columnMap.id, columnMap.name, columnMap.grade) + 1) {
+                errors.push(`Line ${i + 1}: Not enough columns (found ${parts.length}, need ${Math.max(columnMap.id, columnMap.name, columnMap.grade) + 1})`);
+                continue;
             }
             
-            if (!file.name.toLowerCase().endsWith('.csv')) {
-                alert('Please select a valid CSV file.');
-                return;
+            const id = parts[columnMap.id]?.toString().trim();
+            const name = parts[columnMap.name]?.toString().trim();
+            const grade = parts[columnMap.grade]?.toString().trim();
+            const className = columnMap.class !== undefined ? parts[columnMap.class]?.toString().trim() : 'Unassigned';
+            
+            console.log(`Mapped data - ID: "${id}", Name: "${name}", Grade: "${grade}", Class: "${className}"`); // Debug
+            
+            if (!id || !name || !grade) {
+                errors.push(`Line ${i + 1}: Missing required data (id: "${id}", name: "${name}", grade: "${grade}")`);
+                continue;
             }
             
-            try {
-                const text = await file.text();
-                const lines = text.split('\n').filter(line => line.trim());
-                
-                if (lines.length === 0) {
-                    alert('The CSV file appears to be empty.');
-                    return;
-                }
-                
-                const newStudents = [];
-                const errors = [];
-                
-                // Parse header to map columns correctly - more robust detection
-                const firstLine = lines[0].toLowerCase().trim();
-                const headers = firstLine.split(',').map(h => h.trim().replace(/['"]/g, ''));
-                
-                console.log('CSV Headers detected:', headers);
-                
-                // Improved column mapping with exact matching first, then fuzzy matching
-                const columnMap = {};
-                
-                headers.forEach((header, index) => {
-                    const cleanHeader = header.toLowerCase().trim();
-                    
-                    // Exact matches first
-                    if (cleanHeader === 'id') {
-                        columnMap.id = index;
-                    } else if (cleanHeader === 'name') {
-                        columnMap.name = index;
-                    } else if (cleanHeader === 'grade') {
-                        columnMap.grade = index;
-                    } else if (cleanHeader === 'class') {
-                        columnMap.class = index;
-                    }
-                    // Fuzzy matches as fallback
-                    else if (cleanHeader.includes('id') && !columnMap.id) {
-                        columnMap.id = index;
-                    } else if (cleanHeader.includes('name') && !columnMap.name) {
-                        columnMap.name = index;
-                    } else if (cleanHeader.includes('grade') && !columnMap.grade) {
-                        columnMap.grade = index;
-                    } else if ((cleanHeader.includes('class') || cleanHeader.includes('room')) && !columnMap.class) {
-                        columnMap.class = index;
-                    }
-                });
-                
-                console.log('Column mapping detected:', columnMap);
-                console.log('Headers array:', headers);
-                
-                // Verify we found all required columns
-                if (columnMap.id === undefined || columnMap.name === undefined || columnMap.grade === undefined) {
-                    const missingFields = [];
-                    if (columnMap.id === undefined) missingFields.push('id');
-                    if (columnMap.name === undefined) missingFields.push('name');
-                    if (columnMap.grade === undefined) missingFields.push('grade');
-                    
-                    alert(`Could not find required columns: ${missingFields.join(', ')}\n\nYour CSV headers: ${headers.join(', ')}\n\nExpected: id, name, grade, class (in any order)`);
-                    return;
-                }
-                
-                // Process data rows (skip header)
-                for (let i = 1; i < lines.length; i++) {
-                    const line = lines[i].trim();
-                    if (!line) continue;
-                    
-                    // Better CSV parsing - handle quoted values with commas
-                    const parts = [];
-                    let current = '';
-                    let inQuotes = false;
-                    
-                    for (let j = 0; j < line.length; j++) {
-                        const char = line[j];
-                        if (char === '"') {
-                            inQuotes = !inQuotes;
-                        } else if (char === ',' && !inQuotes) {
-                            parts.push(current.trim().replace(/^"|"$/g, ''));
-                            current = '';
-                        } else {
-                            current += char;
-                        }
-                    }
-                    parts.push(current.trim().replace(/^"|"$/g, '')); // Add final part
-                    
-                    console.log(`Line ${i}: ${parts}`); // Debug logging
-                    
-                    if (parts.length < Math.max(columnMap.id, columnMap.name, columnMap.grade) + 1) {
-                        errors.push(`Line ${i + 1}: Not enough columns (found ${parts.length}, need ${Math.max(columnMap.id, columnMap.name, columnMap.grade) + 1})`);
-                        continue;
-                    }
-                    
-                    const id = parts[columnMap.id]?.toString().trim();
-                    const name = parts[columnMap.name]?.toString().trim();
-                    const grade = parts[columnMap.grade]?.toString().trim();
-                    const className = columnMap.class !== undefined ? parts[columnMap.class]?.toString().trim() : 'Unassigned';
-                    
-                    console.log(`Mapped data - ID: "${id}", Name: "${name}", Grade: "${grade}", Class: "${className}"`); // Debug
-                    
-                    if (!id || !name || !grade) {
-                        errors.push(`Line ${i + 1}: Missing required data (id: "${id}", name: "${name}", grade: "${grade}")`);
-                        continue;
-                    }
-                    
-                    // Check if student ID already exists
-                    if (students.find(s => s.id === id) || newStudents.find(s => s.id === id)) {
-                        errors.push(`Line ${i + 1}: Student ID "${id}" already exists`);
-                        continue;
-                    }
-                    
-                    newStudents.push({
-                        id: id,
-                        name: name,
-                        grade: grade,
-                        class: className || 'Unassigned'
-                    });
-                }
-                
-                console.log('Processed students:', newStudents); // Debug
-                
-                if (errors.length > 0) {
-                    console.log('Errors found:', errors);
-                    const proceed = confirm(`Found ${errors.length} error(s):\n\n${errors.slice(0, 5).join('\n')}${errors.length > 5 ? '\n...' : ''}\n\nDo you want to add the ${newStudents.length} valid students?`);
-                    
-                    if (!proceed) {
-                        return;
-                    }
-                }
-                
-                if (newStudents.length === 0) {
-                    alert('No valid students found in the CSV file.');
-                    return;
-                }
-                
-                // Add students to Firebase if connected
-                if (db) {
-                    try {
-                        const batch = db.batch();
-                        newStudents.forEach(student => {
-                            const docRef = db.collection('students').doc(student.id);
-                            batch.set(docRef, {
-                                name: student.name,
-                                grade: student.grade,
-                                class: student.class
-                            });
-                        });
-                        await batch.commit();
-                        console.log('Students saved to Firebase via batch');
-                    } catch (error) {
-                        console.error('Error saving students to Firebase:', error);
-                        alert('Students added locally, but could not save to Firebase. Check your connection.');
-                    }
-                }
-                
-                // Add to local array
-                students.push(...newStudents);
-                
-                // Update UI
-                updateStudentList();
-                updateDashboardStats();
-                populateFilterOptions();
-                
-                // Clear file input
-                fileInput.value = '';
-                
-                alert(`Successfully added ${newStudents.length} student(s)!${errors.length > 0 ? `\n(${errors.length} lines had errors and were skipped)` : ''}`);
-                
-            } catch (error) {
-                console.error('Error reading CSV file:', error);
-                alert('Error reading the CSV file. Please make sure it\'s a valid CSV format.');
+            // Check if student ID already exists
+            if (students.find(s => s.id === id) || newStudents.find(s => s.id === id)) {
+                errors.push(`Line ${i + 1}: Student ID "${id}" already exists`);
+                continue;
+            }
+            
+            newStudents.push({
+                id: id,
+                name: name,
+                grade: grade,
+                class: className || 'Unassigned'
+            });
+        }
+        
+        console.log('Processed students:', newStudents); // Debug
+        
+        if (errors.length > 0) {
+            console.log('Errors found:', errors);
+            const proceed = confirm(`Found ${errors.length} error(s):\n\n${errors.slice(0, 5).join('\n')}${errors.length > 5 ? '\n...' : ''}\n\nDo you want to add the ${newStudents.length} valid students?`);
+            
+            if (!proceed) {
+                return;
             }
         }
+        
+        if (newStudents.length === 0) {
+            alert('No valid students found in the CSV file.');
+            return;
+        }
+        
+        // Add students to Firebase if connected
+        if (db) {
+            try {
+                const batch = db.batch();
+                newStudents.forEach(student => {
+                    const docRef = db.collection('students').doc(student.id);
+                    batch.set(docRef, {
+                        name: student.name,
+                        grade: student.grade,
+                        class: student.class
+                    });
+                });
+                await batch.commit();
+                console.log('Students saved to Firebase via batch');
+            } catch (error) {
+                console.error('Error saving students to Firebase:', error);
+                alert('Students added locally, but could not save to Firebase. Check your connection.');
+            }
+        }
+        
+        // Add to local array
+        students.push(...newStudents);
+        
+        // Update UI
+        updateStudentList();
+        updateDashboardStats();
+        populateFilterOptions();
+        
+        // Clear file input
+        fileInput.value = '';
+        
+        alert(`Successfully added ${newStudents.length} student(s)!${errors.length > 0 ? `\n(${errors.length} lines had errors and were skipped)` : ''}`);
+        
+    } catch (error) {
+        console.error('Error reading CSV file:', error);
+        alert('Error reading the CSV file. Please make sure it\'s a valid CSV format.');
+    }
+}
 
         function downloadSampleCSV() {
             const csvContent = `id,name,grade,class
@@ -749,7 +1464,6 @@ if (operation === '+') {
             }
         }
 
-        // Updated Student List with Alphabetical Sorting and Always-Visible Delete Buttons
         function updateStudentList() {
             const listEl = document.getElementById('studentList');
             listEl.innerHTML = '';
@@ -759,22 +1473,18 @@ if (operation === '+') {
                 return;
             }
             
-            // Sort students alphabetically by name
-            const sortedStudents = [...students].sort((a, b) => a.name.localeCompare(b.name));
-            
-            sortedStudents.forEach((student) => {
-                const originalIndex = students.findIndex(s => s.id === student.id);
+            students.forEach((student, index) => {
                 const div = document.createElement('div');
                 div.className = 'student-item';
                 div.innerHTML = `
                     <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <div onclick="showStudentProgress(students[${originalIndex}])" style="flex-grow: 1; cursor: pointer; min-width: 0;">
+                        <div onclick="showStudentProgress(students[${index}])" style="flex-grow: 1; cursor: pointer; min-width: 0;">
                             <strong style="display: block; margin-bottom: 2px; word-wrap: break-word; white-space: normal;">${student.name}</strong>
                             <div style="font-size: 0.9em; color: #666;">
                                 ID: ${student.id} • Grade: ${student.grade} • Class: ${student.class}
                             </div>
                         </div>
-                        <button onclick="deleteStudent(${originalIndex})" style="background: #f44336; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; font-size: 12px; margin-left: 10px; flex-shrink: 0;">Delete</button>
+                        <button onclick="deleteStudent(${index})" style="background: #f44336; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; font-size: 12px; margin-left: 10px; flex-shrink: 0;">Delete</button>
                     </div>
                 `;
                 listEl.appendChild(div);
@@ -1045,23 +1755,14 @@ if (operation === '+') {
                 return;
             }
             
-            // Sort filtered students alphabetically
-            const sortedStudents = [...filteredStudents].sort((a, b) => a.name.localeCompare(b.name));
-            
-            sortedStudents.forEach(student => {
+            filteredStudents.forEach(student => {
                 const div = document.createElement('div');
                 div.className = 'student-item';
                 div.innerHTML = `
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <div onclick="showStudentProgress(students.find(s => s.id === '${student.id}'))" style="flex-grow: 1; cursor: pointer; min-width: 0;">
-                            <strong>${student.name}</strong><br>
-                            <div style="font-size: 0.9em; color: #666;">
-                                ID: ${student.id} • Grade: ${student.grade} • Class: ${student.class}
-                            </div>
-                        </div>
-                        <button onclick="deleteStudent(students.findIndex(s => s.id === '${student.id}'))" style="background: #f44336; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; font-size: 12px; margin-left: 10px; flex-shrink: 0;">Delete</button>
-                    </div>
+                    <strong>${student.name}</strong><br>
+                    ID: ${student.id} • Grade: ${student.grade} • Class: ${student.class}
                 `;
+                div.onclick = () => showStudentProgress(student);
                 listEl.appendChild(div);
             });
         }
@@ -1294,848 +1995,4 @@ if (operation === '+') {
         });
     </script>
 </body>
-</html><!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Math Facts Tracker</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-            background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
-            min-height: 100vh;
-        }
-        .container {
-            background: white;
-            padding: 30px;
-            border-radius: 15px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-            text-align: center;
-        }
-        h1 {
-            color: #333;
-            margin-bottom: 30px;
-            font-size: 2.5em;
-        }
-        .status {
-            margin: 20px 0;
-            padding: 10px;
-            border-radius: 5px;
-            font-weight: bold;
-        }
-        .status.connected {
-            background: #e8f5e8;
-            color: #2e7d32;
-            border: 1px solid #4caf50;
-        }
-        .status.connecting {
-            background: #fff3e0;
-            color: #f57f17;
-            border: 1px solid #ff9800;
-        }
-        .status.local {
-            background: #fce4ec;
-            color: #c2185b;
-            border: 1px solid #e91e63;
-        }
-        input[type="text"], input[type="number"], input[type="password"] {
-            padding: 15px;
-            font-size: 18px;
-            border: 2px solid #ddd;
-            border-radius: 8px;
-            width: 200px;
-            margin: 10px;
-            text-align: center;
-        }
-        button {
-            padding: 15px 25px;
-            font-size: 18px;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            margin: 10px;
-            font-weight: bold;
-        }
-        .btn-primary {
-            background: #2196f3;
-            color: white;
-        }
-        .btn-success {
-            background: #4caf50;
-            color: white;
-        }
-        .btn-secondary {
-            background: #757575;
-            color: white;
-        }
-        .btn-warning {
-            background: #ff9800;
-            color: white;
-        }
-        button:hover {
-            opacity: 0.9;
-        }
-        button:disabled {
-            background: #ccc;
-            cursor: not-allowed;
-        }
-        .problem {
-            font-size: 4em;
-            margin: 30px 0;
-            color: #333;
-            font-weight: bold;
-        }
-        .feedback {
-            font-size: 2em;
-            margin: 20px 0;
-            font-weight: bold;
-        }
-        .feedback.correct {
-            color: #4caf50;
-        }
-        .feedback.incorrect {
-            color: #f44336;
-        }
-        
-        /* Responsive Visual Feedback Modal */
-        .feedback-modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.8);
-            z-index: 1000;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 10px;
-            box-sizing: border-box;
-        }
-        
-        .feedback-content {
-            background: white;
-            padding: 20px;
-            border-radius: 15px;
-            max-width: 90vw;
-            max-height: 90vh;
-            width: 100%;
-            text-align: center;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-            overflow-y: auto;
-            box-sizing: border-box;
-        }
-
-        @media (min-width: 768px) {
-            .feedback-content {
-                max-width: 600px;
-                padding: 30px;
-            }
-        }
-        
-        .feedback-title {
-            font-size: 1.8em;
-            color: #f44336;
-            margin-bottom: 20px;
-            font-weight: bold;
-        }
-        
-        .visual-explanation {
-            margin: 30px 0;
-            padding: 20px;
-            background: #f9f9f9;
-            border-radius: 10px;
-            border: 2px solid #e0e0e0;
-        }
-        
-        .math-step {
-            margin: 15px 0;
-            font-size: 1.4em;
-            font-weight: bold;
-            color: #333;
-        }
-        
-        .visual-blocks {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            margin: 20px 0;
-            flex-wrap: wrap;
-            gap: 10px;
-        }
-        
-        .block-group {
-            text-align: center;
-        }
-        
-        .block-label {
-            font-size: 0.9em;
-            color: #666;
-            margin-bottom: 5px;
-        }
-        
-        .blocks {
-            display: inline-flex;
-            flex-wrap: wrap;
-            max-width: 150px;
-            gap: 2px;
-        }
-        
-        .block {
-            width: 12px;
-            height: 12px;
-            border: 1px solid #333;
-            margin: 1px;
-        }
-        
-        .block.positive {
-            background: #4caf50;
-        }
-        
-        .block.negative {
-            background: #f44336;
-        }
-        
-        .operation-symbol {
-            font-size: 2em;
-            margin: 0 15px;
-            color: #333;
-            font-weight: bold;
-        }
-        
-        .student-list {
-            text-align: left;
-            max-height: 300px;
-            overflow-y: auto;
-            margin: 20px 0;
-        }
-        .student-item {
-            padding: 10px;
-            border: 1px solid #ddd;
-            margin: 5px 0;
-            border-radius: 5px;
-            cursor: pointer;
-            background: #f9f9f9;
-        }
-        .student-item:hover {
-            background: #e3f2fd;
-        }
-        .student-item.selected {
-            background: #bbdefb;
-            border-color: #2196f3;
-        }
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 20px;
-            margin: 20px 0;
-        }
-        .card {
-            background: #f5f5f5;
-            padding: 20px;
-            border-radius: 10px;
-            text-align: center;
-        }
-        .card h3 {
-            margin: 0 0 10px 0;
-            color: #333;
-        }
-        .card .number {
-            font-size: 2em;
-            font-weight: bold;
-            color: #2196f3;
-        }
-        .hidden {
-            display: none;
-        }
-        
-        /* Student Real-time Mastery Display */
-        .student-mastery-display {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: white;
-            padding: 15px;
-            border-radius: 10px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-            border: 2px solid #2196f3;
-            z-index: 100;
-            min-width: 200px;
-        }
-
-        .mastery-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 10px;
-            margin-top: 10px;
-        }
-
-        .mastery-card {
-            background: #f5f5f5;
-            padding: 10px;
-            border-radius: 5px;
-            text-align: center;
-        }
-
-        .mastery-card h4 {
-            margin: 0 0 5px 0;
-            font-size: 0.8em;
-            color: #666;
-        }
-
-        .mastery-card .number {
-            font-size: 1.2em;
-            font-weight: bold;
-            color: #2196f3;
-        }
-        
-        /* Student Detail Sections */
-        .student-detail-section {
-            margin: 30px 0;
-            padding: 20px;
-            background: #f9f9f9;
-            border-radius: 10px;
-            border: 1px solid #e0e0e0;
-        }
-        
-        .student-detail-section h3 {
-            margin: 0 0 15px 0;
-            color: #333;
-            border-bottom: 2px solid #2196f3;
-            padding-bottom: 5px;
-        }
-        
-        .error-patterns {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-        }
-        
-        .pattern-card {
-            background: white;
-            padding: 15px;
-            border-radius: 8px;
-            border: 1px solid #ddd;
-            text-align: center;
-        }
-        
-        .pattern-problem {
-            font-size: 1.2em;
-            font-weight: bold;
-            color: #f44336;
-            margin-bottom: 10px;
-        }
-        
-        .pattern-stats {
-            font-size: 0.9em;
-            color: #666;
-        }
-        
-        .recent-problems {
-            max-height: 400px;
-            overflow-y: auto;
-        }
-        
-        .problem-table {
-            width: 100%;
-            border-collapse: collapse;
-            background: white;
-            border-radius: 8px;
-            overflow: hidden;
-        }
-        
-        .problem-table th {
-            background: #2196f3;
-            color: white;
-            padding: 12px;
-            text-align: left;
-            font-weight: bold;
-        }
-        
-        .problem-table td {
-            padding: 10px 12px;
-            border-bottom: 1px solid #eee;
-        }
-        
-        .problem-table tr:hover {
-            background: #f5f5f5;
-        }
-        
-        .correct-answer {
-            color: #4caf50;
-            font-weight: bold;
-        }
-        
-        .incorrect-answer {
-            color: #f44336;
-            font-weight: bold;
-        }
-        
-        .timestamp {
-            font-size: 0.8em;
-            color: #666;
-        }
-
-        .login-error {
-            color: #f44336;
-            margin-top: 10px;
-            font-weight: bold;
-            padding: 10px;
-            background: #ffebee;
-            border-radius: 5px;
-            border: 1px solid #f44336;
-        }
-
-        /* Filters Section Styles */
-        .filters-section {
-            margin: 30px 0;
-            padding: 20px;
-            background: #f9f9f9;
-            border-radius: 10px;
-            border: 1px solid #e0e0e0;
-        }
-
-        .filters-section h3 {
-            margin: 0 0 20px 0;
-            color: #333;
-            border-bottom: 2px solid #2196f3;
-            padding-bottom: 5px;
-        }
-
-        .filters-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-
-        .filter-group label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-            color: #555;
-        }
-
-        .filter-group select {
-            width: 100%;
-            padding: 8px;
-            border: 2px solid #ddd;
-            border-radius: 5px;
-            font-size: 14px;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>Math Facts Tracker</h1>
-        
-        <!-- Status Indicator -->
-        <div id="status" class="status connecting">
-            Connecting to Firebase...
-        </div>
-        
-        <!-- Login Screen -->
-        <div id="loginScreen">
-            <h2>Student Login</h2>
-            <input type="text" id="studentId" placeholder="Enter Student ID" />
-            <br>
-            <button class="btn-primary" onclick="studentLogin()">Start Practice</button>
-            <br><br>
-            <button class="btn-success" onclick="showTeacherLogin()">Teacher Dashboard</button>
-        </div>
-        
-        <!-- Teacher Login Screen -->
-        <div id="teacherLoginScreen" class="hidden">
-            <h2>Teacher Login</h2>
-            <p>Enter the teacher password to access the dashboard</p>
-            <input type="password" id="teacherPassword" placeholder="Teacher Password" />
-            <br>
-            <button class="btn-primary" onclick="teacherLogin()">Login</button>
-            <br><br>
-            <button class="btn-secondary" onclick="backToMainLogin()">Back</button>
-            <div id="loginError" class="login-error hidden">
-                Incorrect password. Please try again.
-            </div>
-        </div>
-        
-        <!-- Student Practice Screen -->
-        <div id="practiceScreen" class="hidden">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <div>
-                    <h2 id="studentWelcome"></h2>
-                    <div id="studentMasteryDisplay" class="student-mastery-display hidden">
-                        <h4 style="margin: 0 0 10px 0; color: #333;">Your Progress</h4>
-                        <div class="mastery-grid">
-                            <div class="mastery-card">
-                                <h4>Mastery</h4>
-                                <div class="number" id="liveMastery">0%</div>
-                            </div>
-                            <div class="mastery-card">
-                                <h4>Practiced</h4>
-                                <div class="number" id="livePracticed">0</div>
-                            </div>
-                            <div class="mastery-card">
-                                <h4>Correct</h4>
-                                <div class="number" id="liveCorrect">0</div>
-                            </div>
-                            <div class="mastery-card">
-                                <h4>Session</h4>
-                                <div class="number" id="liveSession">0/0</div>
-                            </div>
-                        </div>
-                    </div>
-                    <p id="studentScore">Score: 0/0</p>
-                </div>
-                <button class="btn-secondary" onclick="logout()">Logout</button>
-            </div>
-            
-            <div id="problemArea">
-                <div class="problem" id="problem"></div>
-                <input type="number" id="answer" placeholder="?" style="font-size: 2em; width: 150px;" />
-                <br>
-                <button class="btn-primary" onclick="submitAnswer()">Submit Answer</button>
-            </div>
-            
-            <div id="feedback" class="feedback hidden"></div>
-        </div>
-        
-        <!-- Visual Feedback Modal -->
-        <div id="feedbackModal" class="feedback-modal hidden">
-            <div class="feedback-content">
-                <div class="feedback-title">Let's work through this together!</div>
-                <div class="visual-explanation">
-                    <div id="visualProblem" class="math-step"></div>
-                    <div id="visualSolution"></div>
-                </div>
-                <button class="btn-success" onclick="closeFeedbackModal()">OK, I understand!</button>
-            </div>
-        </div>
-        
-        <!-- Teacher Dashboard -->
-        <div id="teacherScreen" class="hidden">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <h2>Teacher Dashboard</h2>
-                <button class="btn-secondary" onclick="logout()">Back to Login</button>
-            </div>
-            
-            <div class="grid">
-                <div class="card">
-                    <h3>Total Students</h3>
-                    <div class="number" id="totalStudents">0</div>
-                </div>
-                <div class="card">
-                    <h3>Average Mastery</h3>
-                    <div class="number" id="averageMastery">0%</div>
-                </div>
-                <div class="card">
-                    <h3>Active Today</h3>
-                    <div class="number" id="activeToday">0</div>
-                </div>
-            </div>
-            
-            <!-- Class Mastery Overview -->
-            <h3>Class Performance Overview</h3>
-            <div id="classMasteryOverview" class="grid" style="margin-bottom: 30px;">
-                <!-- Class mastery cards will be populated here -->
-            </div>
-            
-            <h3>Add Students</h3>
-            
-            <!-- Single Student Entry -->
-            <div style="margin-bottom: 20px;">
-                <h4>Add Single Student</h4>
-                <input type="text" id="newStudentId" placeholder="Student ID" />
-                <input type="text" id="newStudentName" placeholder="Name" />
-                <input type="text" id="newStudentGrade" placeholder="Grade" />
-                <input type="text" id="newStudentClass" placeholder="Class" />
-                <button class="btn-primary" onclick="addStudent()">Add Student</button>
-            </div>
-            
-            <!-- CSV Upload -->
-            <div style="margin-bottom: 20px; padding: 20px; background: #f0f8ff; border-radius: 10px; border: 2px dashed #2196f3;">
-                <h4>Upload Students via CSV</h4>
-                <p style="margin: 10px 0; color: #666; font-size: 14px;">
-                    CSV should have columns: <strong>id, name, grade, class</strong><br>
-                    Example: 001,Alice Johnson,3,Math-3A
-                </p>
-                <input type="file" id="csvFileInput" accept=".csv" style="margin: 10px 0;" />
-                <br>
-                <button class="btn-success" onclick="uploadCSV()">Upload CSV</button>
-                <button class="btn-secondary" onclick="downloadSampleCSV()" style="margin-left: 10px;">Download Sample CSV</button>
-            </div>
-            
-            <div style="margin: 20px 0;">
-                <button class="btn-warning" onclick="addSampleStudents()" style="margin-right: 10px;">Add Sample Students</button>
-                <button class="btn-secondary" onclick="clearAllStudents()">Clear All Students</button>
-            </div>
-            
-            <!-- Smart Filters Section -->
-            <div class="filters-section">
-                <h3>Smart Filters</h3>
-                <div class="filters-grid">
-                    <div class="filter-group">
-                        <label for="classFilter">Filter by Class:</label>
-                        <select id="classFilter" onchange="applyFilters()">
-                            <option value="">All Classes</option>
-                        </select>
-                    </div>
-                    
-                    <div class="filter-group">
-                        <label for="gradeFilter">Filter by Grade:</label>
-                        <select id="gradeFilter" onchange="applyFilters()">
-                            <option value="">All Grades</option>
-                        </select>
-                    </div>
-                    
-                    <div class="filter-group">
-                        <label for="patternFilter">Filter by Problem Pattern:</label>
-                        <select id="patternFilter" onchange="applyFilters()">
-                            <option value="">All Patterns</option>
-                            <option value="pos_plus_pos">A + B (Positive + Positive)</option>
-                            <option value="pos_plus_neg">A + (-B) (Positive + Negative)</option>
-                            <option value="pos_minus_pos">A - B (Positive - Positive)</option>
-                            <option value="pos_minus_neg">A - (-B) (Positive - Negative)</option>
-                            <option value="neg_plus_pos">(-A) + B (Negative + Positive)</option>
-                            <option value="neg_plus_neg">(-A) + (-B) (Negative + Negative)</option>
-                            <option value="neg_minus_pos">(-A) - B (Negative - Positive)</option>
-                            <option value="neg_minus_neg">(-A) - (-B) (Negative - Negative)</option>
-                        </select>
-                    </div>
-                    
-                    <div class="filter-group">
-                        <label for="errorThreshold">Min Error Rate (%):</label>
-                        <select id="errorThreshold" onchange="applyFilters()">
-                            <option value="0">Any Error Rate</option>
-                            <option value="25">25%+ Errors</option>
-                            <option value="50">50%+ Errors</option>
-                            <option value="75">75%+ Errors</option>
-                        </select>
-                    </div>
-                </div>
-                
-                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-                    <button class="btn-warning" onclick="clearAllFilters()" style="padding: 10px 20px;">Clear All Filters</button>
-                    <div id="filterResults" style="font-weight: bold; color: #555;">Showing all students</div>
-                </div>
-            </div>
-            
-            <h3>Students</h3>
-            <div class="student-list" id="studentList"></div>
-            
-            <div id="studentProgress" class="hidden">
-                <h3 id="progressTitle"></h3>
-                <div class="grid">
-                    <div class="card">
-                        <h3>Mastery %</h3>
-                        <div class="number" id="studentMastery">0%</div>
-                    </div>
-                    <div class="card">
-                        <h3>Facts Practiced</h3>
-                        <div class="number" id="factsPracticed">0</div>
-                    </div>
-                    <div class="card">
-                        <h3>Total Mistakes</h3>
-                        <div class="number" id="totalMistakes">0</div>
-                    </div>
-                </div>
-                
-                <!-- Error Patterns Section -->
-                <div class="student-detail-section">
-                    <h3>Problem Analysis</h3>
-                    <div id="errorPatterns" class="error-patterns"></div>
-                </div>
-                
-                <!-- Recent Problems Section -->
-                <div class="student-detail-section">
-                    <h3>Last 25 Problems</h3>
-                    <div id="recentProblems" class="recent-problems"></div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-    <script>
-        // Application State
-        const TEACHER_PASSWORD = "MathTeacher2024!";
-        let db = null;
-        let currentUser = null;
-        let currentProblem = null;
-        let score = { correct: 0, total: 0 };
-        let students = [];
-        
-        // Firebase Configuration
-        const firebaseConfig = {
-            apiKey: "AIzaSyDc850NX40XMBTwcypsRy_1zNIm-dMqCzw",
-            authDomain: "math-facts-app-v1.firebaseapp.com",
-            projectId: "math-facts-app-v1",
-            storageBucket: "math-facts-app-v1.firebasestorage.app",
-            messagingSenderId: "797235830684",
-            appId: "1:797235830684:web:e7c569649fedf456733259",
-            measurementId: "G-MYV10DWB5M"
-        };
-
-        // Utility Functions
-        function updateStatus(type, message) {
-            const statusEl = document.getElementById('status');
-            statusEl.className = `status ${type}`;
-            statusEl.textContent = message;
-        }
-
-        function showScreen(screenId) {
-            const screens = ['loginScreen', 'teacherLoginScreen', 'practiceScreen', 'teacherScreen'];
-            screens.forEach(screen => {
-                document.getElementById(screen).classList.add('hidden');
-            });
-            document.getElementById(screenId).classList.remove('hidden');
-            
-            // Show/hide mastery display based on screen
-            const masteryDisplay = document.getElementById('studentMasteryDisplay');
-            if (screenId === 'practiceScreen') {
-                masteryDisplay.classList.remove('hidden');
-                updateLiveMastery(); // Initial load
-            } else {
-                masteryDisplay.classList.add('hidden');
-            }
-        }
-
-        // Firebase Functions
-        function initFirebase() {
-            console.log('Starting Firebase initialization...');
-            try {
-                if (typeof firebase !== 'undefined') {
-                    firebase.initializeApp(firebaseConfig);
-                    db = firebase.firestore();
-                    console.log('Firebase initialized successfully');
-                    updateStatus('connected', 'Connected to Firebase');
-                    loadStudentsFromFirebase();
-                } else {
-                    console.log('Firebase not available, running in local mode');
-                    updateStatus('local', 'Running in local mode');
-                    db = null;
-                }
-            } catch (error) {
-                console.error('Firebase initialization failed:', error);
-                updateStatus('local', 'Running in local mode');
-                db = null;
-            }
-        }
-
-        async function loadStudentsFromFirebase() {
-            if (!db) return;
-            
-            try {
-                console.log('Attempting to load students from Firebase...');
-                const snapshot = await db.collection('students').get();
-                const firebaseStudents = [];
-                
-                snapshot.forEach(doc => {
-                    console.log('Found student document:', doc.id, doc.data());
-                    firebaseStudents.push({ id: doc.id, ...doc.data() });
-                });
-                
-                console.log('Total students loaded from Firebase:', firebaseStudents.length);
-                
-                if (firebaseStudents.length > 0) {
-                    students = firebaseStudents;
-                    updateStudentList();
-                    updateDashboardStats();
-                    populateFilterOptions();
-                } else {
-                    console.log('No students found in Firebase collection');
-                }
-            } catch (error) {
-                console.error('Error loading students from Firebase:', error);
-            }
-        }
-
-        // Calculate category-based mastery system
-        function calculateCategoryMastery(attempts) {
-            const categories = {
-                'pos_plus_pos': 'Positive + Positive',
-                'pos_plus_neg': 'Positive + Negative', 
-                'pos_minus_pos': 'Positive - Positive',
-                'pos_minus_neg': 'Positive - Negative',
-                'neg_plus_pos': 'Negative + Positive',
-                'neg_plus_neg': 'Negative + Negative',
-                'neg_minus_pos': 'Negative - Positive',
-                'neg_minus_neg': 'Negative - Negative'
-            };
-            
-            const categoryAttempts = {};
-            Object.keys(categories).forEach(category => {
-                categoryAttempts[category] = [];
-            });
-            
-            attempts.forEach(attempt => {
-                const category = categorizeProblem(attempt.problem);
-                if (category && categoryAttempts[category]) {
-                    categoryAttempts[category].push(attempt);
-                }
-            });
-            
-            let masteredCategories = 0;
-            const categoryDetails = {};
-            
-            Object.keys(categories).forEach(categoryKey => {
-                const categoryAttemptsList = categoryAttempts[categoryKey];
-                
-                const recentAttempts = categoryAttemptsList
-                    .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
-                    .slice(0, 5);
-                
-                const correctCount = recentAttempts.filter(a => a.isCorrect).length;
-                const totalCount = recentAttempts.length;
-                const isMastered = totalCount >= 5 && correctCount === 5;
-                
-                if (isMastered) {
-                    masteredCategories++;
-                }
-                
-                categoryDetails[categoryKey] = {
-                    name: categories[categoryKey],
-                    correct: correctCount,
-                    total: totalCount,
-                    mastered: isMastered,
-                    percentage: totalCount > 0 ? ((correctCount / totalCount) * 100).toFixed(1) : 0
-                };
-            });
-            
-            const overallMastery = ((masteredCategories / 8) * 100).toFixed(1);
-            
-            return {
-                percentage: overallMastery,
-                masteredCategories,
-                totalCategories: 8,
-                categoryDetails
-            };
-        }
-
-        function categorizeProblem(problemString) {
-            const parts = problemString.trim().split(/\s+/);
-            if (parts.length !== 3) return null;
-            
-            const num1 = parseInt(parts[0]);
-            const operation = parts[1];
-            const num2 = parseInt(parts[2]);
-            
-            if (isNaN(num1) || isNaN(num2)) return null;
-            
-            const num1Positive = num1 >= 0;
-            const num2Positive = num2 >= 0;
-            
-            if (operation === '+') {
-                if (num1Positive && num2Positive) return 'pos_plus_pos';
-                if (num1Positive && !num2Positive) return 'pos_plus_neg';
-                if (!num1Positive && num2Positive) return 'neg_plus_pos';
-                if (!num1Positive && !num2Positive) return 'neg_plus_neg';
-            } else if (operation === '-') {
-                if (num1Positive && num2Positive) return 'pos_minus_pos';
-                if (num1Positive && !num2Positive) return 'pos_minus_neg';
-                if (!num1Positive && num2Positive) return 'neg_minus_pos';
-                if
+</html>
