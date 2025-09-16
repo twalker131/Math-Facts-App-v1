@@ -1221,8 +1221,16 @@ function updateStudentList() {
                 
                 if (firebaseStudents.length > 0) {
                     students = firebaseStudents;
-                    updateStudentList();
-                    updateDashboardStats();
+                    // Only call these functions if they exist (defined later in the code)
+                    if (typeof updateStudentList === 'function') {
+                        updateStudentList();
+                    }
+                    if (typeof updateDashboardStats === 'function') {
+                        updateDashboardStats();
+                    }
+                    if (typeof populateFilterOptions === 'function') {
+                        populateFilterOptions();
+                    }
                     console.log('Students updated in UI');
                 } else {
                     console.log('No students found in Firebase - using empty array');
@@ -2173,15 +2181,20 @@ function updateStudentList() {
             
             // Give Firebase scripts time to load, then initialize
             setTimeout(() => {
-                if (typeof firebase !== 'undefined') {
-                    console.log('Firebase detected, initializing...');
-                    initFirebase();
-                } else {
-                    console.log('Firebase still not available after timeout');
-                    updateStatus('local', 'Firebase scripts blocked - running offline');
-                    
-                    // Try to load Firebase manually
-                    loadFirebaseManually();
+                try {
+                    if (typeof firebase !== 'undefined') {
+                        console.log('Firebase detected, initializing...');
+                        initFirebase();
+                    } else {
+                        console.log('Firebase still not available after timeout');
+                        updateStatus('local', 'Firebase scripts blocked - running offline');
+                        
+                        // Try to load Firebase manually
+                        loadFirebaseManually();
+                    }
+                } catch (error) {
+                    console.error('Error in initialization:', error);
+                    updateStatus('local', 'Initialization error - running in basic mode');
                 }
             }, 2000); // Wait 2 seconds for scripts to load
         });
@@ -2226,7 +2239,20 @@ function updateStudentList() {
         // Global error handler to catch any JavaScript errors
         window.addEventListener('error', function(e) {
             console.error('JavaScript error:', e.error);
+            console.error('Error at line:', e.lineno);
+            console.error('Error message:', e.message);
             updateStatus('local', 'Error detected - running in basic mode');
+            
+            // Prevent the error from breaking the entire page
+            e.preventDefault();
+            return true;
+        });
+
+        // Prevent uncaught promise rejections from breaking the app
+        window.addEventListener('unhandledrejection', function(e) {
+            console.error('Unhandled promise rejection:', e.reason);
+            updateStatus('local', 'Promise error - check console');
+            e.preventDefault();
         });
     </script>
 </body>
