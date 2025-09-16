@@ -498,16 +498,187 @@
             }
         }
 
-        // Try to initialize Firebase, fall back to local mode if it fails
+        // Firebase Functions
         function initFirebase() {
             console.log('Starting Firebase initialization...');
-            updateStatus('local', 'Running in local mode (Firebase unavailable)');
-            db = null;
+            try {
+                if (typeof firebase !== 'undefined') {
+                    firebase.initializeApp({
+                        apiKey: "AIzaSyDc850NX40XMBTwcypsRy_1zNIm-dMqCzw",
+                        authDomain: "math-facts-app-v1.firebaseapp.com",
+                        projectId: "math-facts-app-v1",
+                        storageBucket: "math-facts-app-v1.firebasestorage.app",
+                        messagingSenderId: "797235830684",
+                        appId: "1:797235830684:web:e7c569649fedf456733259",
+                        measurementId: "G-MYV10DWB5M"
+                    });
+                    db = firebase.firestore();
+                    console.log('Firebase initialized successfully');
+                    updateStatus('connected', 'Connected to Firebase');
+                    loadStudentsFromFirebase();
+                } else {
+                    console.log('Firebase not available, running in local mode');
+                    updateStatus('local', 'Running in local mode (Firebase scripts not loaded)');
+                    db = null;
+                }
+            } catch (error) {
+                console.error('Firebase initialization failed:', error);
+                updateStatus('local', 'Firebase connection failed - running in local mode');
+                db = null;
+            }
+        }
+
+        async function loadStudentsFromFirebase() {
+            if (!db) return;
+            
+            try {
+                console.log('Attempting to load students from Firebase...');
+                const snapshot = await db.collection('students').get();
+                const firebaseStudents = [];
+                
+                snapshot.forEach(doc => {
+                    console.log('Found student document:', doc.id, doc.data());
+                    firebaseStudents.push({ id: doc.id, ...doc.data() });
+                });
+                
+                console.log('Total students loaded from Firebase:', firebaseStudents.length);
+                
+                if (firebaseStudents.length > 0) {
+                    students = firebaseStudents;
+                    updateStudentList();
+                    updateDashboardStats();
+                } else {
+                    console.log('No students found in Firebase collection');
+                }
+            } catch (error) {
+                console.error('Error loading students from Firebase:', error);
+                updateStatus('local', 'Firebase read error - using local data');
+            }
         }
 
         // Student Mastery Display Functions
-        function updateStudentMasteryDisplay() {
-            displayEmptyMasteryBoxes();
+        async function updateStudentMasteryDisplay() {
+            if (!currentUser) {
+                displayEmptyMasteryBoxes();
+                return;
+            }
+            
+            if (!db) {
+                displayEmptyMasteryBoxes();
+                return;
+            }
+            
+            try {
+                const snapshot = await db.collection('problemAttempts')
+                    .where('studentId', '==', currentUser.id)
+                    .get();
+                
+                const attempts = [];
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    if (data.timestamp && data.timestamp.toDate) {
+                        data.timestamp = data.timestamp.toDate();
+                    }
+                    attempts.push(data);
+                });
+                
+                const masteryResults = calculateCategoryMastery(attempts);
+                displayStudentMasteryBoxes(masteryResults.categoryDetails);
+                
+            } catch (error) {
+                console.error('Error loading student mastery:', error);
+                displayEmptyMasteryBoxes();
+            }
+        }
+
+        // Calculate category-based mastery system
+        function calculateCategoryMastery(attempts) {
+            const categories = {
+                'pos_plus_pos': 'Positive + Positive',
+                'pos_plus_neg': 'Positive + Negative', 
+                'pos_minus_pos': 'Positive - Positive',
+                'pos_minus_neg': 'Positive - Negative',
+                'neg_plus_pos': 'Negative + Positive',
+                'neg_plus_neg': 'Negative + Negative',
+                'neg_minus_pos': 'Negative - Positive',
+                'neg_minus_neg': 'Negative - Negative'
+            };
+            
+            const categoryAttempts = {};
+            Object.keys(categories).forEach(category => {
+                categoryAttempts[category] = [];
+            });
+            
+            attempts.forEach(attempt => {
+                const category = categorizeProblem(attempt.problem);
+                if (category && categoryAttempts[category]) {
+                    categoryAttempts[category].push(attempt);
+                }
+            });
+            
+            let masteredCategories = 0;
+            const categoryDetails = {};
+            
+            Object.keys(categories).forEach(categoryKey => {
+                const categoryAttemptsList = categoryAttempts[categoryKey];
+                
+                const recentAttempts = categoryAttemptsList
+                    .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+                    .slice(0, 5);
+                
+                const correctCount = recentAttempts.filter(a => a.isCorrect).length;
+                const totalCount = recentAttempts.length;
+                const isMastered = totalCount >= 5 && correctCount === 5;
+                
+                if (isMastered) {
+                    masteredCategories++;
+                }
+                
+                categoryDetails[categoryKey] = {
+                    name: categories[categoryKey],
+                    correct: correctCount,
+                    total: totalCount,
+                    mastered: isMastered,
+                    percentage: totalCount > 0 ? ((correctCount / totalCount) * 100).toFixed(1) : 0
+                };
+            });
+            
+            const overallMastery = ((masteredCategories / 8) * 100).toFixed(1);
+            
+            return {
+                percentage: overallMastery,
+                masteredCategories,
+                totalCategories: 8,
+                categoryDetails
+            };
+        }
+
+        function categorizeProblem(problemString) {
+            const parts = problemString.trim().split(/\s+/);
+            if (parts.length !== 3) return null;
+            
+            const num1 = parseInt(parts[0]);
+            const operation = parts[1];
+            const num2 = parseInt(parts[2]);
+            
+            if (isNaN(num1) || isNaN(num2)) return null;
+            
+            const num1Positive = num1 >= 0;
+            const num2Positive = num2 >= 0;
+            
+            if (operation === '+') {
+                if (num1Positive && num2Positive) return 'pos_plus_pos';
+                if (num1Positive && !num2Positive) return 'pos_plus_neg';
+                if (!num1Positive && num2Positive) return 'neg_plus_pos';
+                if (!num1Positive && !num2Positive) return 'neg_plus_neg';
+            } else if (operation === '-') {
+                if (num1Positive && num2Positive) return 'pos_minus_pos';
+                if (num1Positive && !num2Positive) return 'pos_minus_neg';
+                if (!num1Positive && num2Positive) return 'neg_minus_pos';
+                if (!num1Positive && !num2Positive) return 'neg_minus_neg';
+            }
+            
+            return null;
         }
 
         function displayStudentMasteryBoxes(categoryDetails) {
@@ -647,6 +818,28 @@
             const isCorrect = userAnswer === currentProblem.answer;
             score.total++;
             if (isCorrect) score.correct++;
+            
+            // Save to Firebase if connected
+            if (db && currentUser) {
+                const problemData = {
+                    studentId: currentUser.id,
+                    problem: `${currentProblem.num1} ${currentProblem.operation} ${currentProblem.num2}`,
+                    correctAnswer: currentProblem.answer,
+                    studentAnswer: userAnswer,
+                    isCorrect: isCorrect,
+                    timestamp: new Date(),
+                    sessionScore: `${score.correct}/${score.total}`
+                };
+                
+                db.collection('problemAttempts').add(problemData)
+                    .then(docRef => {
+                        console.log('Problem attempt saved to Firebase with ID:', docRef.id);
+                        updateStudentMasteryDisplay();
+                    })
+                    .catch(error => {
+                        console.error('Error saving problem attempt:', error);
+                    });
+            }
             
             updateScore();
             
@@ -800,6 +993,21 @@
                 }
                 
                 const student = { id, name, grade, class: className || 'Unassigned' };
+                
+                // Save to Firebase if connected
+                if (db) {
+                    db.collection('students').doc(id).set({
+                        name: student.name,
+                        grade: student.grade,
+                        class: student.class
+                    }).then(() => {
+                        console.log('Student saved to Firebase');
+                    }).catch(error => {
+                        console.error('Error saving to Firebase:', error);
+                        alert('Student added locally, but could not save to Firebase. Check your connection.');
+                    });
+                }
+                
                 students.push(student);
                 
                 idEl.value = '';
