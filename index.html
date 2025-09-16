@@ -498,60 +498,117 @@
             }
         }
 
-        // Firebase Functions
+        // Firebase Functions with enhanced debugging
         function initFirebase() {
             console.log('Starting Firebase initialization...');
+            updateStatus('connecting', 'Checking Firebase availability...');
+            
+            // Check if Firebase scripts loaded
+            if (typeof firebase === 'undefined') {
+                console.error('Firebase is not defined - scripts may not have loaded');
+                updateStatus('local', 'Firebase scripts failed to load');
+                db = null;
+                return;
+            }
+            
+            console.log('Firebase object found, attempting initialization...');
+            
             try {
-                if (typeof firebase !== 'undefined') {
-                    firebase.initializeApp({
-                        apiKey: "AIzaSyDc850NX40XMBTwcypsRy_1zNIm-dMqCzw",
-                        authDomain: "math-facts-app-v1.firebaseapp.com",
-                        projectId: "math-facts-app-v1",
-                        storageBucket: "math-facts-app-v1.firebasestorage.app",
-                        messagingSenderId: "797235830684",
-                        appId: "1:797235830684:web:e7c569649fedf456733259",
-                        measurementId: "G-MYV10DWB5M"
-                    });
-                    db = firebase.firestore();
-                    console.log('Firebase initialized successfully');
-                    updateStatus('connected', 'Connected to Firebase');
-                    loadStudentsFromFirebase();
-                } else {
-                    console.log('Firebase not available, running in local mode');
-                    updateStatus('local', 'Running in local mode (Firebase scripts not loaded)');
-                    db = null;
-                }
+                const firebaseConfig = {
+                    apiKey: "AIzaSyDc850NX40XMBTwcypsRy_1zNIm-dMqCzw",
+                    authDomain: "math-facts-app-v1.firebaseapp.com",
+                    projectId: "math-facts-app-v1",
+                    storageBucket: "math-facts-app-v1.firebasestorage.app",
+                    messagingSenderId: "797235830684",
+                    appId: "1:797235830684:web:e7c569649fedf456733259",
+                    measurementId: "G-MYV10DWB5M"
+                };
+                
+                console.log('Initializing Firebase with config:', firebaseConfig);
+                firebase.initializeApp(firebaseConfig);
+                
+                console.log('Firebase app initialized, getting firestore...');
+                db = firebase.firestore();
+                
+                console.log('Firestore instance created successfully');
+                updateStatus('connected', 'Connected to Firebase');
+                
+                // Test the connection
+                testFirebaseConnection();
+                
             } catch (error) {
-                console.error('Firebase initialization failed:', error);
-                updateStatus('local', 'Firebase connection failed - running in local mode');
+                console.error('Firebase initialization failed with error:', error);
+                console.error('Error details:', error.message);
+                updateStatus('local', `Firebase error: ${error.message}`);
+                db = null;
+            }
+        }
+
+        async function testFirebaseConnection() {
+            if (!db) {
+                console.log('No database connection to test');
+                return;
+            }
+            
+            try {
+                console.log('Testing Firebase connection by reading students collection...');
+                updateStatus('connecting', 'Testing Firebase connection...');
+                
+                const snapshot = await db.collection('students').limit(1).get();
+                console.log('Firebase connection test successful');
+                updateStatus('connected', 'Firebase connected and working');
+                
+                // Now load students
+                loadStudentsFromFirebase();
+                
+            } catch (error) {
+                console.error('Firebase connection test failed:', error);
+                console.error('Error code:', error.code);
+                console.error('Error message:', error.message);
+                
+                if (error.code === 'permission-denied') {
+                    updateStatus('local', 'Firebase permission denied - check security rules');
+                } else if (error.code === 'unavailable') {
+                    updateStatus('local', 'Firebase service unavailable');
+                } else {
+                    updateStatus('local', `Firebase error: ${error.code}`);
+                }
+                
                 db = null;
             }
         }
 
         async function loadStudentsFromFirebase() {
-            if (!db) return;
+            if (!db) {
+                console.log('No database connection - skipping student load');
+                return;
+            }
             
             try {
-                console.log('Attempting to load students from Firebase...');
+                console.log('Loading students from Firebase...');
                 const snapshot = await db.collection('students').get();
                 const firebaseStudents = [];
                 
+                console.log('Got snapshot with', snapshot.size, 'documents');
+                
                 snapshot.forEach(doc => {
-                    console.log('Found student document:', doc.id, doc.data());
+                    console.log('Found student:', doc.id, doc.data());
                     firebaseStudents.push({ id: doc.id, ...doc.data() });
                 });
                 
-                console.log('Total students loaded from Firebase:', firebaseStudents.length);
+                console.log('Total students loaded:', firebaseStudents.length);
                 
                 if (firebaseStudents.length > 0) {
                     students = firebaseStudents;
                     updateStudentList();
                     updateDashboardStats();
+                    console.log('Students updated in UI');
                 } else {
-                    console.log('No students found in Firebase collection');
+                    console.log('No students found in Firebase - using empty array');
                 }
+                
             } catch (error) {
-                console.error('Error loading students from Firebase:', error);
+                console.error('Error loading students:', error);
                 updateStatus('local', 'Firebase read error - using local data');
             }
         }
