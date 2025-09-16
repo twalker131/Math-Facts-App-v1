@@ -1637,7 +1637,7 @@ async function uploadCSV() {
                 div.className = 'student-item';
                 div.innerHTML = `
                     <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <div onclick="showStudentProgress(student)" style="flex-grow: 1; cursor: pointer; min-width: 0;">
+                        <div onclick="showStudentProgress(students.find(s => s.id === '${student.id}'))" style="flex-grow: 1; cursor: pointer; min-width: 0;">
                             <strong style="display: block; margin-bottom: 2px; word-wrap: break-word; white-space: normal;">${student.name}</strong>
                             <div style="font-size: 0.9em; color: #666;">
                                 ID: ${student.id} • Grade: ${student.grade} • Class: ${student.class}
