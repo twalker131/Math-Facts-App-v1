@@ -1,4 +1,401 @@
-<!DOCTYPE html>
+function updateStudentList() {
+            const listEl = document.getElementById('studentList');
+            if (!listEl) return;
+            
+            listEl.innerHTML = '';
+            
+            if (students.length === 0) {
+                listEl.innerHTML = '<div style="text-align: center; padding: 20px; color: #666; font-style: italic;">No students added yet. Use the form above to add students.</div>';
+                return;
+            }
+            
+            const sortedStudents = [...students].sort((a, b) => a.name.localeCompare(b.name));
+            
+            sortedStudents.forEach(student => {
+                const originalIndex = students.findIndex(s => s.id === student.id);
+                const div = document.createElement('div');
+                div.className = 'student-item';
+                div.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div onclick="showStudentProgress(students[${originalIndex}])" style="flex-grow: 1; cursor: pointer; min-width: 0;">
+                            <strong style="display: block; margin-bottom: 2px; word-wrap: break-word; white-space: normal;">${student.name}</strong>
+                            <div style="font-size: 0.9em; color: #666;">
+                                ID: ${student.id} • Grade: ${student.grade} • Class: ${student.class}
+                            </div>
+                        </div>
+                        <button onclick="deleteStudent(${originalIndex})" style="background: #f44336; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; font-size: 12px; margin-left: 10px; flex-shrink: 0;">Delete</button>
+                    </div>
+                `;
+                listEl.appendChild(div);
+            });
+        }
+
+        async function updateDashboardStats() {
+            const totalEl = document.getElementById('totalStudents');
+            const masteryEl = document.getElementById('averageMastery');
+            const activeEl = document.getElementById('activeToday');
+            
+            if (totalEl) totalEl.textContent = students.length;
+            
+            if (students.length === 0) {
+                if (masteryEl) masteryEl.textContent = '0%';
+                if (activeEl) activeEl.textContent = '0';
+                updateClassMasteryOverview();
+                return;
+            }
+            
+            if (!db) {
+                if (masteryEl) masteryEl.textContent = 'N/A';
+                if (activeEl) activeEl.textContent = 'N/A';
+                updateClassMasteryOverview();
+                return;
+            }
+            
+            // Calculate real stats if Firebase is available
+            try {
+                let totalMastery = 0;
+                let studentsWithData = 0;
+                let activeToday = 0;
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                
+                const allAttemptsSnapshot = await db.collection('problemAttempts').get();
+                const allAttempts = [];
+                
+                allAttemptsSnapshot.forEach(doc => {
+                    const data = doc.data();
+                    if (data.timestamp && data.timestamp.toDate) {
+                        data.timestamp = data.timestamp.toDate();
+                    }
+                    allAttempts.push(data);
+                });
+                
+                for (const student of students) {
+                    const studentAttempts = allAttempts.filter(attempt => attempt.studentId === student.id);
+                    
+                    if (studentAttempts.length > 0) {
+                        const masteryResults = calculateCategoryMastery(studentAttempts);
+                        totalMastery += parseFloat(masteryResults.percentage);
+                        studentsWithData++;
+                        
+                        const todayAttempts = studentAttempts.filter(attempt => {
+                            const attemptDate = new Date(attempt.timestamp);
+                            attemptDate.setHours(0, 0, 0, 0);
+                            return attemptDate.getTime() === today.getTime();
+                        });
+                        
+                        if (todayAttempts.length > 0) {
+                            activeToday++;
+                        }
+                    }
+                }
+                
+                const averageMastery = studentsWithData > 0 ? (totalMastery / studentsWithData).toFixed(1) : 0;
+                if (masteryEl) masteryEl.textContent = averageMastery + '%';
+                if (activeEl) activeEl.textContent = activeToday;
+                
+                await updateClassMasteryOverview(allAttempts);
+                
+            } catch (error) {
+                console.error('Error calculating dashboard stats:', error);
+                if (masteryEl) masteryEl.textContent = 'Error';
+                if (activeEl) activeEl.textContent = 'Error';
+            }
+        }
+
+        async function updateClassMasteryOverview(allAttempts = null) {
+            const container = document.getElementById('classMasteryOverview');
+            if (!container) return;
+            
+            if (students.length === 0) {
+                container.innerHTML = '<div style="text-align: center; color: #666; font-style: italic;">No students added yet</div>';
+                return;
+            }
+            
+            const classes = [...new Set(students.map(s => s.class))].sort();
+            
+            if (!db || !allAttempts) {
+                container.innerHTML = classes.map(className => `
+                    <div class="card" style="min-width: 150px; flex: 1;">
+                        <h3>${className}</h3>
+                        <div class="number" style="font-size: 1.5em;">N/A</div>
+                        <div style="font-size: 0.8em; color: #666;">${students.filter(s => s.class === className).length} students</div>
+                    </div>
+                `).join('');
+                return;
+            }
+            
+            const classMasteryData = [];
+            
+            for (const className of classes) {
+                const classStudents = students.filter(s => s.class === className);
+                let totalClassMastery = 0;
+                let studentsWithData = 0;
+                
+                for (const student of classStudents) {
+                    const studentAttempts = allAttempts.filter(attempt => attempt.studentId === student.id);
+                    
+                    if (studentAttempts.length > 0) {
+                        const masteryResults = calculateCategoryMastery(studentAttempts);
+                        totalClassMastery += parseFloat(masteryResults.percentage);
+                        studentsWithData++;
+                    }
+                }
+                
+                const averageClassMastery = studentsWithData > 0 ? (totalClassMastery / studentsWithData).toFixed(1) : 0;
+                
+                classMasteryData.push({
+                    name: className,
+                    mastery: averageClassMastery,
+                    totalStudents: classStudents.length,
+                    studentsWithData: studentsWithData
+                });
+            }
+            
+            container.innerHTML = classMasteryData.map(classData => {
+                const masteryColor = classData.mastery >= 80 ? '#4caf50' : 
+                                   classData.mastery >= 60 ? '#ff9800' : '#f44336';
+                
+                return `
+                    <div class="card" style="min-width: 150px; flex: 1;">
+                        <h3>${classData.name}</h3>
+                        <div class="number" style="font-size: 1.5em; color: ${masteryColor};">
+                            ${classData.studentsWithData > 0 ? classData.mastery + '%' : 'No Data'}
+                        </div>
+                        <div style="font-size: 0.8em; color: #666;">
+                            ${classData.totalStudents} students
+                            ${classData.studentsWithData > 0 ? `<br>${classData.studentsWithData} with data` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // CSV Upload Functions
+        async function uploadCSV() {
+            const fileInput = document.getElementById('csvFileInput');
+            if (!fileInput) return;
+            
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                alert('Please select a CSV file first.');
+                return;
+            }
+            
+            if (!file.name.toLowerCase().endsWith('.csv')) {
+                alert('Please select a valid CSV file.');
+                return;
+            }
+            
+            try {
+                const text = await file.text();
+                const lines = text.split('\n').filter(line => line.trim());
+                
+                if (lines.length === 0) {
+                    alert('The CSV file appears to be empty.');
+                    return;
+                }
+                
+                const newStudents = [];
+                const errors = [];
+                
+                const firstLine = lines[0].toLowerCase().trim();
+                const headers = firstLine.split(',').map(h => h.trim().replace(/['"]/g, ''));
+                
+                console.log('CSV Headers detected:', headers);
+                
+                const columnMap = {};
+                
+                headers.forEach((header, index) => {
+                    const cleanHeader = header.toLowerCase().trim();
+                    
+                    if (cleanHeader === 'id') {
+                        columnMap.id = index;
+                    } else if (cleanHeader === 'name') {
+                        columnMap.name = index;
+                    } else if (cleanHeader === 'grade') {
+                        columnMap.grade = index;
+                    } else if (cleanHeader === 'class') {
+                        columnMap.class = index;
+                    }
+                    else if (cleanHeader.includes('id') && !columnMap.id) {
+                        columnMap.id = index;
+                    } else if (cleanHeader.includes('name') && !columnMap.name) {
+                        columnMap.name = index;
+                    } else if (cleanHeader.includes('grade') && !columnMap.grade) {
+                        columnMap.grade = index;
+                    } else if ((cleanHeader.includes('class') || cleanHeader.includes('room')) && !columnMap.class) {
+                        columnMap.class = index;
+                    }
+                });
+                
+                if (columnMap.id === undefined || columnMap.name === undefined || columnMap.grade === undefined) {
+                    const missingFields = [];
+                    if (columnMap.id === undefined) missingFields.push('id');
+                    if (columnMap.name === undefined) missingFields.push('name');
+                    if (columnMap.grade === undefined) missingFields.push('grade');
+                    
+                    alert(`Could not find required columns: ${missingFields.join(', ')}\n\nYour CSV headers: ${headers.join(', ')}\n\nExpected: id, name, grade, class (in any order)`);
+                    return;
+                }
+                
+                for (let i = 1; i < lines.length; i++) {
+                    const line = lines[i].trim();
+                    if (!line) continue;
+                    
+                    const parts = [];
+                    let current = '';
+                    let inQuotes = false;
+                    
+                    for (let j = 0; j < line.length; j++) {
+                        const char = line[j];
+                        if (char === '"') {
+                            inQuotes = !inQuotes;
+                        } else if (char === ',' && !inQuotes) {
+                            parts.push(current.trim().replace(/^"|"$/g, ''));
+                            current = '';
+                        } else {
+                            current += char;
+                        }
+                    }
+                    parts.push(current.trim().replace(/^"|"$/g, ''));
+                    
+                    if (parts.length < Math.max(columnMap.id, columnMap.name, columnMap.grade) + 1) {
+                        errors.push(`Line ${i + 1}: Not enough columns (found ${parts.length}, need ${Math.max(columnMap.id, columnMap.name, columnMap.grade) + 1})`);
+                        continue;
+                    }
+                    
+                    const id = parts[columnMap.id]?.toString().trim();
+                    const name = parts[columnMap.name]?.toString().trim();
+                    const grade = parts[columnMap.grade]?.toString().trim();
+                    const className = columnMap.class !== undefined ? parts[columnMap.class]?.toString().trim() : 'Unassigned';
+                    
+                    if (!id || !name || !grade) {
+                        errors.push(`Line ${i + 1}: Missing required data (id: "${id}", name: "${name}", grade: "${grade}")`);
+                        continue;
+                    }
+                    
+                    if (students.find(s => s.id === id) || newStudents.find(s => s.id === id)) {
+                        errors.push(`Line ${i + 1}: Student ID "${id}" already exists`);
+                        continue;
+                    }
+                    
+                    newStudents.push({
+                        id: id,
+                        name: name,
+                        grade: grade,
+                        class: className || 'Unassigned'
+                    });
+                }
+                
+                if (errors.length > 0) {
+                    const proceed = confirm(`Found ${errors.length} error(s):\n\n${errors.slice(0, 5).join('\n')}${errors.length > 5 ? '\n...' : ''}\n\nDo you want to add the ${newStudents.length} valid students?`);
+                    
+                    if (!proceed) {
+                        return;
+                    }
+                }
+                
+                if (newStudents.length === 0) {
+                    alert('No valid students found in the CSV file.');
+                    return;
+                }
+                
+                if (db) {
+                    try {
+                        const batch = db.batch();
+                        newStudents.forEach(student => {
+                            const docRef = db.collection('students').doc(student.id);
+                            batch.set(docRef, {
+                                name: student.name,
+                                grade: student.grade,
+                                class: student.class
+                            });
+                        });
+                        await batch.commit();
+                        console.log('Students saved to Firebase via batch');
+                    } catch (error) {
+                        console.error('Error saving students to Firebase:', error);
+                        alert('Students added locally, but could not save to Firebase. Check your connection.');
+                    }
+                }
+                
+                students.push(...newStudents);
+                
+                updateStudentList();
+                updateDashboardStats();
+                populateFilterOptions();
+                
+                fileInput.value = '';
+                
+                alert(`Successfully added ${newStudents.length} student(s)!${errors.length > 0 ? `\n(${errors.length} lines had errors and were skipped)` : ''}`);
+                
+            } catch (error) {
+                console.error('Error reading CSV file:', error);
+                alert('Error reading the CSV file. Please make sure it\'s a valid CSV format.');
+            }
+        }
+
+        function downloadSampleCSV() {
+            const csvContent = `id,name,grade,class
+001,Alice Johnson,3,Math-3A
+002,Bob Smith,3,Math-3A
+003,Carol Davis,4,Math-4B
+004,David Brown,3,Math-3B
+005,Emma Wilson,4,Math-4B`;
+            
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'sample_students.csv';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+        }
+
+        function populateFilterOptions() {
+            const classFilter = document.getElementById('classFilter');
+            const gradeFilter = document.getElementById('gradeFilter');
+            
+            if (!classFilter || !gradeFilter) return;
+            
+            const classes = [...new Set(students.map(s => s.class))].sort();
+            const grades = [...new Set(students.map(s => s.grade))].sort();
+            
+            classFilter.innerHTML = '<option value="">All Classes</option>';
+            gradeFilter.innerHTML = '<option value="">All Grades</option>';
+            
+            classes.forEach(className => {
+                const option = document.createElement('option');
+                option.value = className;
+                option.textContent = className;
+                classFilter.appendChild(option);
+            });
+            
+            grades.forEach(grade => {
+                const option = document.createElement('option');
+                option.value = grade;
+                option.textContent = `Grade ${grade}`;
+                gradeFilter.appendChild(option);
+            });
+        }
+
+        // Filter Functions
+        async function applyFilters() {
+            const classFilter = document.getElementById('classFilter');
+            const gradeFilter = document.getElementById('gradeFilter');
+            const patternFilter = document.getElementById('patternFilter');
+            const errorThreshold = document.getElementById('errorThreshold');
+            const filterResults = document.getElementById('filterResults');
+            
+            if (!classFilter || !gradeFilter || !patternFilter || !errorThreshold) return;
+            
+            const classValue = classFilter.value;
+            const gradeValue = gradeFilter.value;
+            const patternValue =<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -347,6 +744,131 @@
             border-radius: 5px;
             border: 1px solid #f44336;
         }
+
+        /* Student Detail Sections */
+        .student-detail-section {
+            margin: 30px 0;
+            padding: 20px;
+            background: #f9f9f9;
+            border-radius: 10px;
+            border: 1px solid #e0e0e0;
+        }
+        
+        .student-detail-section h3 {
+            margin: 0 0 15px 0;
+            color: #333;
+            border-bottom: 2px solid #2196f3;
+            padding-bottom: 5px;
+        }
+        
+        .error-patterns {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        
+        .pattern-card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            text-align: center;
+        }
+        
+        .pattern-problem {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #f44336;
+            margin-bottom: 10px;
+        }
+        
+        .pattern-stats {
+            font-size: 0.9em;
+            color: #666;
+        }
+        
+        .recent-problems {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .problem-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .problem-table th {
+            background: #2196f3;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: bold;
+        }
+        
+        .problem-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .problem-table tr:hover {
+            background: #f5f5f5;
+        }
+        
+        .correct-answer {
+            color: #4caf50;
+            font-weight: bold;
+        }
+        
+        .incorrect-answer {
+            color: #f44336;
+            font-weight: bold;
+        }
+        
+        .timestamp {
+            font-size: 0.8em;
+            color: #666;
+        }
+
+        /* Filters Section Styles */
+        .filters-section {
+            margin: 30px 0;
+            padding: 20px;
+            background: #f9f9f9;
+            border-radius: 10px;
+            border: 1px solid #e0e0e0;
+        }
+
+        .filters-section h3 {
+            margin: 0 0 20px 0;
+            color: #333;
+            border-bottom: 2px solid #2196f3;
+            padding-bottom: 5px;
+        }
+
+        .filters-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .filter-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+
+        .filter-group select {
+            width: 100%;
+            padding: 8px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
     </style>
 </head>
 <body>
@@ -444,14 +966,15 @@
                 </div>
             </div>
             
-            <h3>Add Students</h3>
-            
-            <div style="margin-bottom: 20px;">
-                <h4>Add Sample Students for Testing</h4>
-                <button class="btn-warning" onclick="addSampleStudents()">Add Sample Students</button>
-                <button class="btn-secondary" onclick="clearAllStudents()">Clear All Students</button>
+            <!-- Class Mastery Overview -->
+            <h3>Class Performance Overview</h3>
+            <div id="classMasteryOverview" class="grid" style="margin-bottom: 30px;">
+                <!-- Class mastery cards will be populated here -->
             </div>
             
+            <h3>Add Students</h3>
+            
+            <!-- Single Student Entry -->
             <div style="margin-bottom: 20px;">
                 <h4>Add Single Student</h4>
                 <input type="text" id="newStudentId" placeholder="Student ID" />
@@ -461,8 +984,106 @@
                 <button class="btn-primary" onclick="addStudent()">Add Student</button>
             </div>
             
+            <!-- CSV Upload -->
+            <div style="margin-bottom: 20px; padding: 20px; background: #f0f8ff; border-radius: 10px; border: 2px dashed #2196f3;">
+                <h4>Upload Students via CSV</h4>
+                <p style="margin: 10px 0; color: #666; font-size: 14px;">
+                    CSV should have columns: <strong>id, name, grade, class</strong><br>
+                    Example: 001,Alice Johnson,3,Math-3A
+                </p>
+                <input type="file" id="csvFileInput" accept=".csv" style="margin: 10px 0;" />
+                <br>
+                <button class="btn-success" onclick="uploadCSV()">Upload CSV</button>
+                <button class="btn-secondary" onclick="downloadSampleCSV()" style="margin-left: 10px;">Download Sample CSV</button>
+            </div>
+            
+            <div style="margin: 20px 0;">
+                <button class="btn-warning" onclick="addSampleStudents()">Add Sample Students</button>
+                <button class="btn-secondary" onclick="clearAllStudents()">Clear All Students</button>
+            </div>
+            
+            <!-- Smart Filters Section -->
+            <div class="filters-section">
+                <h3>Smart Filters</h3>
+                <div class="filters-grid">
+                    <div class="filter-group">
+                        <label for="classFilter">Filter by Class:</label>
+                        <select id="classFilter" onchange="applyFilters()">
+                            <option value="">All Classes</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label for="gradeFilter">Filter by Grade:</label>
+                        <select id="gradeFilter" onchange="applyFilters()">
+                            <option value="">All Grades</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label for="patternFilter">Filter by Problem Pattern:</label>
+                        <select id="patternFilter" onchange="applyFilters()">
+                            <option value="">All Patterns</option>
+                            <option value="pos_plus_pos">A + B (Positive + Positive)</option>
+                            <option value="pos_plus_neg">A + (-B) (Positive + Negative)</option>
+                            <option value="pos_minus_pos">A - B (Positive - Positive)</option>
+                            <option value="pos_minus_neg">A - (-B) (Positive - Negative)</option>
+                            <option value="neg_plus_pos">(-A) + B (Negative + Positive)</option>
+                            <option value="neg_plus_neg">(-A) + (-B) (Negative + Negative)</option>
+                            <option value="neg_minus_pos">(-A) - B (Negative - Positive)</option>
+                            <option value="neg_minus_neg">(-A) - (-B) (Negative - Negative)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label for="errorThreshold">Min Error Rate (%):</label>
+                        <select id="errorThreshold" onchange="applyFilters()">
+                            <option value="0">Any Error Rate</option>
+                            <option value="25">25%+ Errors</option>
+                            <option value="50">50%+ Errors</option>
+                            <option value="75">75%+ Errors</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                    <button class="btn-warning" onclick="clearAllFilters()" style="padding: 10px 20px;">Clear All Filters</button>
+                    <div id="filterResults" style="font-weight: bold; color: #555;">Showing all students</div>
+                </div>
+            </div>
+            
             <h3>Students</h3>
             <div class="student-list" id="studentList"></div>
+            
+            <div id="studentProgress" class="hidden">
+                <h3 id="progressTitle"></h3>
+                <div class="grid">
+                    <div class="card">
+                        <h3>Mastery %</h3>
+                        <div class="number" id="studentMastery">0%</div>
+                    </div>
+                    <div class="card">
+                        <h3>Facts Practiced</h3>
+                        <div class="number" id="factsPracticed">0</div>
+                    </div>
+                    <div class="card">
+                        <h3>Total Mistakes</h3>
+                        <div class="number" id="totalMistakes">0</div>
+                    </div>
+                </div>
+                
+                <!-- Error Patterns Section -->
+                <div class="student-detail-section">
+                    <h3>Problem Analysis</h3>
+                    <div id="errorPatterns" class="error-patterns"></div>
+                </div>
+                
+                <!-- Recent Problems Section -->
+                <div class="student-detail-section">
+                    <h3>Last 25 Problems</h3>
+                    <div id="recentProblems" class="recent-problems"></div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -1128,46 +1749,398 @@
             }
         }
 
-        function updateStudentList() {
+        // Filter Functions
+        async function applyFilters() {
+            const classFilter = document.getElementById('classFilter');
+            const gradeFilter = document.getElementById('gradeFilter');
+            const patternFilter = document.getElementById('patternFilter');
+            const errorThreshold = document.getElementById('errorThreshold');
+            const filterResults = document.getElementById('filterResults');
+            
+            if (!classFilter || !gradeFilter || !patternFilter || !errorThreshold) return;
+            
+            const classValue = classFilter.value;
+            const gradeValue = gradeFilter.value;
+            const patternValue = patternFilter.value;
+            const errorValue = parseInt(errorThreshold.value);
+            
+            let filteredStudents = students;
+            
+            if (classValue || gradeValue) {
+                filteredStudents = students.filter(student => {
+                    if (classValue && student.class !== classValue) {
+                        return false;
+                    }
+                    
+                    if (gradeValue && student.grade !== gradeValue) {
+                        return false;
+                    }
+                    
+                    return true;
+                });
+            }
+            
+            if ((patternValue || errorValue > 0) && db) {
+                try {
+                    const snapshot = await db.collection('problemAttempts').get();
+                    const allAttempts = [];
+                    
+                    snapshot.forEach(doc => {
+                        const data = doc.data();
+                        if (data.timestamp && data.timestamp.toDate) {
+                            data.timestamp = data.timestamp.toDate();
+                        }
+                        allAttempts.push(data);
+                    });
+                    
+                    filteredStudents = await filterByPatternAndErrors(filteredStudents, allAttempts, patternValue, errorValue);
+                } catch (error) {
+                    console.error('Error applying pattern/error filters:', error);
+                }
+            }
+            
+            updateFilteredStudentList(filteredStudents);
+            
+            const resultsText = `Showing ${filteredStudents.length} of ${students.length} students`;
+            if (filterResults) filterResults.textContent = resultsText;
+        }
+
+        async function filterByPatternAndErrors(studentsToFilter, allAttempts, patternFilter, errorThreshold) {
+            const filteredStudents = [];
+            
+            for (const student of studentsToFilter) {
+                const studentAttempts = allAttempts.filter(attempt => attempt.studentId === student.id);
+                
+                if (studentAttempts.length === 0 && (patternFilter || errorThreshold > 0)) {
+                    continue;
+                }
+                
+                let includeStudent = true;
+                
+                if (patternFilter) {
+                    const patternAttempts = studentAttempts.filter(attempt => {
+                        const category = categorizeProblem(attempt.problem);
+                        return category === patternFilter;
+                    });
+                    
+                    if (patternAttempts.length === 0) {
+                        includeStudent = false;
+                    } else if (errorThreshold > 0) {
+                        const errors = patternAttempts.filter(attempt => !attempt.isCorrect).length;
+                        const errorRate = (errors / patternAttempts.length) * 100;
+                        
+                        if (errorRate < errorThreshold) {
+                            includeStudent = false;
+                        }
+                    }
+                } else if (errorThreshold > 0) {
+                    const errors = studentAttempts.filter(attempt => !attempt.isCorrect).length;
+                    const errorRate = (errors / studentAttempts.length) * 100;
+                    
+                    if (errorRate < errorThreshold) {
+                        includeStudent = false;
+                    }
+                }
+                
+                if (includeStudent) {
+                    filteredStudents.push(student);
+                }
+            }
+            
+            return filteredStudents;
+        }
+
+        function updateFilteredStudentList(filteredStudents) {
             const listEl = document.getElementById('studentList');
             if (!listEl) return;
             
             listEl.innerHTML = '';
             
-            if (students.length === 0) {
-                listEl.innerHTML = '<div style="text-align: center; padding: 20px; color: #666; font-style: italic;">No students added yet. Use the form above to add students.</div>';
+            if (filteredStudents.length === 0) {
+                listEl.innerHTML = '<div style="text-align: center; padding: 20px; color: #666; font-style: italic;">No students match the current filter criteria.</div>';
                 return;
             }
             
-            const sortedStudents = [...students].sort((a, b) => a.name.localeCompare(b.name));
+            const sortedFilteredStudents = [...filteredStudents].sort((a, b) => a.name.localeCompare(b.name));
             
-            sortedStudents.forEach(student => {
-                const originalIndex = students.findIndex(s => s.id === student.id);
+            sortedFilteredStudents.forEach(student => {
                 const div = document.createElement('div');
                 div.className = 'student-item';
                 div.innerHTML = `
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <div style="flex-grow: 1; cursor: pointer; min-width: 0;">
-                            <strong style="display: block; margin-bottom: 2px; word-wrap: break-word; white-space: normal;">${student.name}</strong>
-                            <div style="font-size: 0.9em; color: #666;">
-                                ID: ${student.id} • Grade: ${student.grade} • Class: ${student.class}
-                            </div>
-                        </div>
-                        <button onclick="deleteStudent(${originalIndex})" style="background: #f44336; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; font-size: 12px; margin-left: 10px; flex-shrink: 0;">Delete</button>
-                    </div>
+                    <strong>${student.name}</strong><br>
+                    ID: ${student.id} • Grade: ${student.grade} • Class: ${student.class}
                 `;
+                div.onclick = () => showStudentProgress(student);
                 listEl.appendChild(div);
             });
         }
 
-        function updateDashboardStats() {
-            const totalEl = document.getElementById('totalStudents');
-            const masteryEl = document.getElementById('averageMastery');
-            const activeEl = document.getElementById('activeToday');
+        function clearAllFilters() {
+            const classFilter = document.getElementById('classFilter');
+            const gradeFilter = document.getElementById('gradeFilter');
+            const patternFilter = document.getElementById('patternFilter');
+            const errorThreshold = document.getElementById('errorThreshold');
+            const filterResults = document.getElementById('filterResults');
             
-            if (totalEl) totalEl.textContent = students.length;
-            if (masteryEl) masteryEl.textContent = 'N/A';
-            if (activeEl) activeEl.textContent = 'N/A';
+            if (classFilter) classFilter.value = '';
+            if (gradeFilter) gradeFilter.value = '';
+            if (patternFilter) patternFilter.value = '';
+            if (errorThreshold) errorThreshold.value = '0';
+            
+            updateStudentList();
+            if (filterResults) filterResults.textContent = `Showing ${students.length} of ${students.length} students`;
+        }
+
+        // Student Progress Functions
+        async function showStudentProgress(student) {
+            const progressTitle = document.getElementById('progressTitle');
+            const studentProgress = document.getElementById('studentProgress');
+            
+            if (progressTitle) progressTitle.textContent = `${student.name}'s Progress`;
+            if (studentProgress) studentProgress.classList.remove('hidden');
+            
+            document.querySelectorAll('.student-item').forEach(item => {
+                item.classList.remove('selected');
+            });
+            
+            if (event && event.target) {
+                const clickedItem = event.target.closest('.student-item');
+                if (clickedItem) clickedItem.classList.add('selected');
+            }
+            
+            if (db) {
+                await loadRealStudentProgress(student.id);
+            } else {
+                generateSampleAnalytics(student);
+            }
+        }
+
+        async function loadRealStudentProgress(studentId) {
+            try {
+                const snapshot = await db.collection('problemAttempts')
+                    .where('studentId', '==', studentId)
+                    .get();
+                
+                const attempts = [];
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    if (data.timestamp && data.timestamp.toDate) {
+                        data.timestamp = data.timestamp.toDate();
+                    }
+                    attempts.push(data);
+                });
+                
+                attempts.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+                
+                const studentMastery = document.getElementById('studentMastery');
+                const factsPracticed = document.getElementById('factsPracticed');
+                const totalMistakes = document.getElementById('totalMistakes');
+                const errorPatterns = document.getElementById('errorPatterns');
+                const recentProblems = document.getElementById('recentProblems');
+                
+                if (attempts.length === 0) {
+                    if (studentMastery) studentMastery.textContent = '0%';
+                    if (factsPracticed) factsPracticed.textContent = '0';
+                    if (totalMistakes) totalMistakes.textContent = '0';
+                    
+                    if (errorPatterns) errorPatterns.innerHTML = '<div style="text-align: center; padding: 20px; color: #666;">No problem attempts yet. Student needs to practice first!</div>';
+                    if (recentProblems) recentProblems.innerHTML = '<div style="text-align: center; padding: 20px; color: #666;">No problems attempted yet.</div>';
+                    return;
+                }
+                
+                const totalAttempts = attempts.length;
+                const correctAttempts = attempts.filter(a => a.isCorrect).length;
+                const incorrectAttempts = totalAttempts - correctAttempts;
+                const masteryResults = calculateCategoryMastery(attempts);
+                
+                if (studentMastery) studentMastery.textContent = masteryResults.percentage + '%';
+                if (factsPracticed) factsPracticed.textContent = totalAttempts;
+                if (totalMistakes) totalMistakes.textContent = incorrectAttempts;
+                
+                const html = displayCategoryMastery(masteryResults.categoryDetails);
+                if (errorPatterns) errorPatterns.innerHTML = html;
+                
+                const recentAttempts = attempts.slice(0, 25);
+                if (recentProblems) {
+                    recentProblems.innerHTML = `
+                        <table class="problem-table">
+                            <thead>
+                                <tr>
+                                    <th>Problem</th>
+                                    <th>Student Answer</th>
+                                    <th>Correct Answer</th>
+                                    <th>Result</th>
+                                    <th>Time</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${recentAttempts.map(attempt => `
+                                    <tr>
+                                        <td><strong>${attempt.problem} = ?</strong></td>
+                                        <td class="${attempt.isCorrect ? 'correct-answer' : 'incorrect-answer'}">${attempt.studentAnswer}</td>
+                                        <td>${attempt.correctAnswer}</td>
+                                        <td>${attempt.isCorrect ? 'Correct' : 'Wrong'}</td>
+                                        <td class="timestamp">${new Date(attempt.timestamp).toLocaleString()}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    `;
+                }
+                
+            } catch (error) {
+                console.error('Error loading student progress:', error);
+                
+                const studentMastery = document.getElementById('studentMastery');
+                const factsPracticed = document.getElementById('factsPracticed');
+                const totalMistakes = document.getElementById('totalMistakes');
+                const errorPatterns = document.getElementById('errorPatterns');
+                const recentProblems = document.getElementById('recentProblems');
+                
+                if (studentMastery) studentMastery.textContent = 'Error';
+                if (factsPracticed) factsPracticed.textContent = 'Error';
+                if (totalMistakes) totalMistakes.textContent = 'Error';
+                
+                if (errorPatterns) {
+                    errorPatterns.innerHTML = `
+                        <div style="text-align: center; padding: 20px; color: #f44336;">
+                            <strong>Error loading student data:</strong><br>
+                            ${error.message}<br><br>
+                            Check the browser console for more details.
+                        </div>
+                    `;
+                }
+                if (recentProblems) {
+                    recentProblems.innerHTML = `
+                        <div style="text-align: center; padding: 20px; color: #f44336;">
+                            Unable to load problem history. Check console for error details.
+                        </div>
+                    `;
+                }
+            }
+        }
+
+        function displayCategoryMastery(categoryDetails) {
+            const categoryOrder = [
+                'pos_plus_pos', 'pos_plus_neg', 'pos_minus_pos', 'pos_minus_neg',
+                'neg_plus_pos', 'neg_plus_neg', 'neg_minus_pos', 'neg_minus_neg'
+            ];
+            
+            let html = '<h4 style="margin-bottom: 15px; color: #333;">Mastery by Problem Type (Need 5/5 of last 5 attempts to master)</h4>';
+            html += '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-bottom: 30px;">';
+            
+            categoryOrder.forEach(key => {
+                const details = categoryDetails[key];
+                const bgColor = details.mastered ? '#e8f5e8' : (details.total > 0 ? '#fff3e0' : '#f5f5f5');
+                const borderColor = details.mastered ? '#4caf50' : (details.total > 0 ? '#ff9800' : '#ccc');
+                const statusIcon = details.mastered ? '✅' : (details.total > 0 ? '⏳' : '⚪');
+                
+                html += `
+                    <div style="background: ${bgColor}; padding: 15px; border-radius: 8px; border: 2px solid ${borderColor}; text-align: center;">
+                        <div style="font-weight: bold; color: #333; margin-bottom: 8px; font-size: 0.9em;">${details.name}</div>
+                        <div style="font-size: 1.5em; font-weight: bold; margin: 8px 0;">
+                            ${statusIcon} ${details.correct}/${details.total}
+                        </div>
+                        <div style="font-size: 0.9em; color: #666;">
+                            ${details.mastered ? 'MASTERED!' : 
+                              details.total === 0 ? 'No attempts yet' :
+                              `${details.percentage}% correct`}
+                            ${details.total < 5 && details.total > 0 ? `<br><small>Need ${5 - details.total} more attempts</small>` : ''}
+                            ${details.total === 0 ? `<br><small>Need 5 attempts to check mastery</small>` : ''}
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+            return html;
+        }
+
+        function generateSampleAnalytics(student) {
+            const studentMastery = document.getElementById('studentMastery');
+            const factsPracticed = document.getElementById('factsPracticed');
+            const totalMistakes = document.getElementById('totalMistakes');
+            const errorPatterns = document.getElementById('errorPatterns');
+            
+            if (studentMastery) studentMastery.textContent = '67.3%';
+            if (factsPracticed) factsPracticed.textContent = '84';
+            if (totalMistakes) totalMistakes.textContent = '23';
+            
+            const samplePatterns = [
+                { problem: '-3-7', errorRate: '78.6', errors: 11, attempts: 14 },
+                { problem: '4--5', errorRate: '71.4', errors: 5, attempts: 7 },
+                { problem: '-8+2', errorRate: '60.0', errors: 6, attempts: 10 },
+                { problem: '1-9', errorRate: '55.6', errors: 5, attempts: 9 },
+                { problem: '-2-6', errorRate: '50.0', errors: 4, attempts: 8 },
+                { problem: '3--4', errorRate: '45.5', errors: 5, attempts: 11 }
+            ];
+            
+            if (errorPatterns) {
+                errorPatterns.innerHTML = samplePatterns.map(pattern => `
+                    <div class="pattern-card">
+                        <div class="pattern-problem">${pattern.problem.replace(/(\+|\-)/g, ' $1 ')} = ?</div>
+                        <div class="pattern-stats">
+                            ${pattern.errors} errors out of ${pattern.attempts} attempts<br>
+                            <strong>${pattern.errorRate}% error rate</strong>
+                        </div>
+                    </div>
+                `).join('');
+            }
+            
+            generateSampleRecentProblems();
+        }
+
+        function generateSampleRecentProblems() {
+            const sampleProblems = [];
+            const operations = ['+', '-'];
+            
+            for (let i = 0; i < 25; i++) {
+                const num1 = Math.floor(Math.random() * 21) - 10;
+                const num2 = Math.floor(Math.random() * 21) - 10;
+                const operation = operations[Math.floor(Math.random() * operations.length)];
+                const correctAnswer = operation === '+' ? num1 + num2 : num1 - num2;
+                const isCorrect = Math.random() > 0.25;
+                const studentAnswer = isCorrect ? correctAnswer : correctAnswer + Math.floor(Math.random() * 5) - 2;
+                
+                const timeAgo = Math.floor(Math.random() * 1440);
+                const timestamp = new Date(Date.now() - timeAgo * 60000);
+                
+                sampleProblems.push({
+                    problem: `${num1} ${operation} ${num2}`,
+                    correctAnswer,
+                    studentAnswer,
+                    isCorrect,
+                    timestamp: timestamp.toLocaleString()
+                });
+            }
+            
+            const recentProblems = document.getElementById('recentProblems');
+            if (recentProblems) {
+                recentProblems.innerHTML = `
+                    <table class="problem-table">
+                        <thead>
+                            <tr>
+                                <th>Problem</th>
+                                <th>Student Answer</th>
+                                <th>Correct Answer</th>
+                                <th>Result</th>
+                                <th>Time</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${sampleProblems.map(p => `
+                                <tr>
+                                    <td><strong>${p.problem} = ?</strong></td>
+                                    <td class="${p.isCorrect ? 'correct-answer' : 'incorrect-answer'}">${p.studentAnswer}</td>
+                                    <td>${p.correctAnswer}</td>
+                                    <td>${p.isCorrect ? 'Correct' : 'Wrong'}</td>
+                                    <td class="timestamp">${p.timestamp}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+            }
         }
 
         function logout() {
