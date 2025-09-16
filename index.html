@@ -117,16 +117,60 @@
             display: flex;
             justify-content: center;
             align-items: center;
+            padding: 20px;
+            box-sizing: border-box;
         }
-        
+
         .feedback-content {
             background: white;
-            padding: 30px;
+            padding: 20px;
             border-radius: 15px;
-            max-width: 600px;
-            width: 90%;
+            max-width: min(90vw, 800px);
+            max-height: min(90vh, 600px);
+            width: 100%;
             text-align: center;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            overflow-y: auto;
+            box-sizing: border-box;
+        }
+
+        /* Mobile adjustments */
+        @media (max-width: 768px) {
+            .feedback-content {
+                padding: 15px;
+                max-width: 95vw;
+                max-height: 95vh;
+            }
+            
+            .visual-blocks {
+                flex-direction: column;
+                gap: 15px;
+            }
+            
+            .blocks {
+                max-width: none;
+                justify-content: center;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .feedback-content {
+                padding: 10px;
+                border-radius: 10px;
+            }
+            
+            .feedback-title {
+                font-size: 1.4em;
+            }
+            
+            .math-step {
+                font-size: 1.2em;
+            }
+            
+            .operation-symbol {
+                font-size: 1.5em;
+                margin: 0 10px;
+            }
         }
         
         .feedback-title {
@@ -422,6 +466,14 @@
                     <p id="studentScore">Score: 0/0</p>
                 </div>
                 <button class="btn-secondary" onclick="logout()">Logout</button>
+            </div>
+            
+            <!-- Student Mastery Progress -->
+            <div id="studentMasteryProgress" style="margin: 20px 0;">
+                <h3 style="text-align: center; color: #333; margin-bottom: 15px;">Your Progress (Need 5 correct in a row to master each type)</h3>
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; max-width: 800px; margin: 0 auto;">
+                    <!-- Mastery boxes will be populated here -->
+                </div>
             </div>
             
             <div id="problemArea">
@@ -830,6 +882,7 @@
                 showScreen('practiceScreen');
                 document.getElementById('studentWelcome').textContent = `Welcome, ${student.name}!`;
                 updateScore();
+                updateStudentMasteryDisplay();
                 nextProblem();
             } else {
                 if (students.length === 0) {
@@ -839,6 +892,107 @@
                     alert(`Student ID not found! Available student IDs: ${studentIds}`);
                 }
             }
+        }
+
+        // Student Mastery Display Functions
+        async function updateStudentMasteryDisplay() {
+            if (!currentUser) return;
+            
+            const masteryContainer = document.querySelector('#studentMasteryProgress div[style*="grid"]');
+            if (!masteryContainer) return;
+            
+            // Create default mastery structure
+            const categoryTitles = {
+                'pos_plus_pos': 'A + B',
+                'pos_plus_neg': 'A + (-B)', 
+                'pos_minus_pos': 'A - B',
+                'pos_minus_neg': 'A - (-B)',
+                'neg_plus_pos': '(-A) + B',
+                'neg_plus_neg': '(-A) + (-B)',
+                'neg_minus_pos': '(-A) - B',
+                'neg_minus_neg': '(-A) - (-B)'
+            };
+            
+            const categoryOrder = [
+                'pos_plus_pos', 'pos_plus_neg', 'pos_minus_pos', 'pos_minus_neg',
+                'neg_plus_pos', 'neg_plus_neg', 'neg_minus_pos', 'neg_minus_neg'
+            ];
+            
+            let categoryDetails = {};
+            
+            // Initialize with defaults
+            categoryOrder.forEach(key => {
+                categoryDetails[key] = {
+                    name: categoryTitles[key],
+                    correct: 0,
+                    total: 0,
+                    mastered: false,
+                    percentage: 0
+                };
+            });
+            
+            // Load real data if connected to Firebase
+            if (db) {
+                try {
+                    const snapshot = await db.collection('problemAttempts')
+                        .where('studentId', '==', currentUser.id)
+                        .get();
+                    
+                    const attempts = [];
+                    snapshot.forEach(doc => {
+                        const data = doc.data();
+                        if (data.timestamp && data.timestamp.toDate) {
+                            data.timestamp = data.timestamp.toDate();
+                        }
+                        attempts.push(data);
+                    });
+                    
+                    if (attempts.length > 0) {
+                        const masteryResults = calculateCategoryMastery(attempts);
+                        categoryDetails = masteryResults.categoryDetails;
+                    }
+                } catch (error) {
+                    console.error('Error loading student mastery data:', error);
+                }
+            }
+            
+            // Generate HTML for mastery boxes
+            let html = '';
+            categoryOrder.forEach(key => {
+                const details = categoryDetails[key];
+                const bgColor = details.mastered ? '#e8f5e8' : (details.total > 0 ? '#fff3e0' : '#f5f5f5');
+                const borderColor = details.mastered ? '#4caf50' : (details.total > 0 ? '#ff9800' : '#ddd');
+                const statusIcon = details.mastered ? '✅' : (details.total > 0 ? '⏳' : '⭕');
+                
+                html += `
+                    <div style="
+                        background: ${bgColor}; 
+                        padding: 8px; 
+                        border-radius: 6px; 
+                        border: 2px solid ${borderColor}; 
+                        text-align: center;
+                        min-height: 60px;
+                        display: flex;
+                        flex-direction: column;
+                        justify-content: center;
+                    ">
+                        <div style="font-weight: bold; color: #333; margin-bottom: 4px; font-size: 0.75em;">
+                            ${details.name}
+                        </div>
+                        <div style="font-size: 1.1em; font-weight: bold; margin: 2px 0;">
+                            ${statusIcon} ${details.correct}/${details.total}
+                        </div>
+                        <div style="font-size: 0.65em; color: #666;">
+                            ${details.mastered ? 'MASTERED!' : 
+                              details.total === 0 ? 'Not tried' :
+                              details.total < 5 ? `Need ${5 - details.total} more` :
+                              `${details.percentage}%`}
+                        </div>
+                    </div>
+                `;
+            });
+            
+            masteryContainer.innerHTML = html;
         }
 
         function nextProblem() {
@@ -871,6 +1025,8 @@
                 try {
                     const docRef = await db.collection('problemAttempts').add(problemData);
                     console.log('Problem attempt saved to Firebase with ID:', docRef.id);
+                    // Update mastery display after saving
+                    updateStudentMasteryDisplay();
                 } catch (error) {
                     console.error('Error saving problem attempt:', error);
                 }
@@ -1473,18 +1629,21 @@ async function uploadCSV() {
                 return;
             }
             
-            students.forEach((student, index) => {
+            // Sort students alphabetically by name
+            const sortedStudents = [...students].sort((a, b) => a.name.localeCompare(b.name));
+
+            sortedStudents.forEach((student, index) => {
                 const div = document.createElement('div');
                 div.className = 'student-item';
                 div.innerHTML = `
                     <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <div onclick="showStudentProgress(students[${index}])" style="flex-grow: 1; cursor: pointer; min-width: 0;">
+                        <div onclick="showStudentProgress(student)" style="flex-grow: 1; cursor: pointer; min-width: 0;">
                             <strong style="display: block; margin-bottom: 2px; word-wrap: break-word; white-space: normal;">${student.name}</strong>
                             <div style="font-size: 0.9em; color: #666;">
                                 ID: ${student.id} • Grade: ${student.grade} • Class: ${student.class}
                             </div>
                         </div>
-                        <button onclick="deleteStudent(${index})" style="background: #f44336; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; font-size: 12px; margin-left: 10px; flex-shrink: 0;">Delete</button>
+                        <button onclick="deleteStudent(${students.findIndex(s => s.id === student.id)})" style="background: #f44336; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; font-size: 12px; margin-left: 10px; flex-shrink: 0;">Delete</button>
                     </div>
                 `;
                 listEl.appendChild(div);
