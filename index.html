@@ -1196,9 +1196,59 @@
 
         // Initialize application when page loads
         window.addEventListener('load', function() {
-            console.log('Page loaded, initializing application...');
-            initFirebase();
+            console.log('Page loaded, checking Firebase availability...');
+            
+            // Give Firebase scripts time to load, then initialize
+            setTimeout(() => {
+                if (typeof firebase !== 'undefined') {
+                    console.log('Firebase detected, initializing...');
+                    initFirebase();
+                } else {
+                    console.log('Firebase still not available after timeout');
+                    updateStatus('local', 'Firebase scripts blocked - running offline');
+                    
+                    // Try to load Firebase manually
+                    loadFirebaseManually();
+                }
+            }, 2000); // Wait 2 seconds for scripts to load
         });
+
+        // Manual Firebase loading as fallback
+        function loadFirebaseManually() {
+            console.log('Attempting manual Firebase load...');
+            updateStatus('connecting', 'Loading Firebase manually...');
+            
+            const script1 = document.createElement('script');
+            script1.src = 'https://unpkg.com/firebase@9.23.0/firebase-app-compat.js';
+            script1.onload = function() {
+                console.log('Firebase app script loaded manually');
+                
+                const script2 = document.createElement('script');
+                script2.src = 'https://unpkg.com/firebase@9.23.0/firebase-firestore-compat.js';
+                script2.onload = function() {
+                    console.log('Firebase firestore script loaded manually');
+                    
+                    // Try initialization again after manual load
+                    setTimeout(() => {
+                        if (typeof firebase !== 'undefined') {
+                            initFirebase();
+                        } else {
+                            updateStatus('local', 'Firebase unavailable - using local mode');
+                        }
+                    }, 1000);
+                };
+                script2.onerror = function() {
+                    console.error('Failed to manually load Firebase firestore');
+                    updateStatus('local', 'Firebase blocked by network - using local mode');
+                };
+                document.head.appendChild(script2);
+            };
+            script1.onerror = function() {
+                console.error('Failed to manually load Firebase app');
+                updateStatus('local', 'Firebase blocked by network - using local mode');
+            };
+            document.head.appendChild(script1);
+        }
 
         // Global error handler to catch any JavaScript errors
         window.addEventListener('error', function(e) {
