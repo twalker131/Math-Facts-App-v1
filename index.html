@@ -105,6 +105,94 @@
             color: #f44336;
         }
         
+        /* Student Mastery Display */
+        .student-mastery-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin: 20px 0;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .mastery-box {
+            background: #f9f9f9;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 12px 8px;
+            text-align: center;
+            min-height: 70px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .mastery-box.mastered {
+            background: #e8f5e8;
+            border-color: #4caf50;
+        }
+
+        .mastery-box.in-progress {
+            background: #fff3e0;
+            border-color: #ff9800;
+        }
+
+        .mastery-box.not-started {
+            background: #f5f5f5;
+            border-color: #ccc;
+        }
+
+        .mastery-title {
+            font-size: 0.9em;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .mastery-score {
+            font-size: 1.1em;
+            font-weight: bold;
+        }
+
+        .mastery-score.mastered {
+            color: #4caf50;
+        }
+
+        .mastery-score.in-progress {
+            color: #ff9800;
+        }
+
+        .mastery-score.not-started {
+            color: #999;
+        }
+
+        .mastery-status {
+            font-size: 0.7em;
+            margin-top: 3px;
+            color: #666;
+        }
+
+        @media (max-width: 600px) {
+            .student-mastery-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 8px;
+            }
+            
+            .mastery-box {
+                padding: 10px 6px;
+                min-height: 60px;
+            }
+            
+            .mastery-title {
+                font-size: 0.8em;
+            }
+            
+            .mastery-score {
+                font-size: 1em;
+            }
+        }
+        
         /* Visual Feedback Modal */
         .feedback-modal {
             position: fixed;
@@ -250,93 +338,6 @@
             display: none;
         }
         
-        /* Student Detail Sections */
-        .student-detail-section {
-            margin: 30px 0;
-            padding: 20px;
-            background: #f9f9f9;
-            border-radius: 10px;
-            border: 1px solid #e0e0e0;
-        }
-        
-        .student-detail-section h3 {
-            margin: 0 0 15px 0;
-            color: #333;
-            border-bottom: 2px solid #2196f3;
-            padding-bottom: 5px;
-        }
-        
-        .error-patterns {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-        }
-        
-        .pattern-card {
-            background: white;
-            padding: 15px;
-            border-radius: 8px;
-            border: 1px solid #ddd;
-            text-align: center;
-        }
-        
-        .pattern-problem {
-            font-size: 1.2em;
-            font-weight: bold;
-            color: #f44336;
-            margin-bottom: 10px;
-        }
-        
-        .pattern-stats {
-            font-size: 0.9em;
-            color: #666;
-        }
-        
-        .recent-problems {
-            max-height: 400px;
-            overflow-y: auto;
-        }
-        
-        .problem-table {
-            width: 100%;
-            border-collapse: collapse;
-            background: white;
-            border-radius: 8px;
-            overflow: hidden;
-        }
-        
-        .problem-table th {
-            background: #2196f3;
-            color: white;
-            padding: 12px;
-            text-align: left;
-            font-weight: bold;
-        }
-        
-        .problem-table td {
-            padding: 10px 12px;
-            border-bottom: 1px solid #eee;
-        }
-        
-        .problem-table tr:hover {
-            background: #f5f5f5;
-        }
-        
-        .correct-answer {
-            color: #4caf50;
-            font-weight: bold;
-        }
-        
-        .incorrect-answer {
-            color: #f44336;
-            font-weight: bold;
-        }
-        
-        .timestamp {
-            font-size: 0.8em;
-            color: #666;
-        }
-
         .login-error {
             color: #f44336;
             margin-top: 10px;
@@ -345,44 +346,6 @@
             background: #ffebee;
             border-radius: 5px;
             border: 1px solid #f44336;
-        }
-
-        /* Filters Section Styles */
-        .filters-section {
-            margin: 30px 0;
-            padding: 20px;
-            background: #f9f9f9;
-            border-radius: 10px;
-            border: 1px solid #e0e0e0;
-        }
-
-        .filters-section h3 {
-            margin: 0 0 20px 0;
-            color: #333;
-            border-bottom: 2px solid #2196f3;
-            padding-bottom: 5px;
-        }
-
-        .filters-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-
-        .filter-group label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-            color: #555;
-        }
-
-        .filter-group select {
-            width: 100%;
-            padding: 8px;
-            border: 2px solid #ddd;
-            border-radius: 5px;
-            font-size: 14px;
         }
     </style>
 </head>
@@ -429,6 +392,14 @@
                 <button class="btn-secondary" onclick="logout()">Logout</button>
             </div>
             
+            <!-- Student Mastery Display -->
+            <div id="studentMasteryDisplay" style="margin: 20px 0;">
+                <h3 style="text-align: center; color: #333; margin-bottom: 15px;">Your Mastery Progress</h3>
+                <div class="student-mastery-grid" id="masteryGrid">
+                    <!-- Mastery boxes will be populated by JavaScript -->
+                </div>
+            </div>
+            
             <div id="problemArea">
                 <div class="problem" id="problem"></div>
                 <input type="number" id="answer" placeholder="?" style="font-size: 2em; width: 150px;" />
@@ -473,15 +444,14 @@
                 </div>
             </div>
             
-            <!-- Class Mastery Overview -->
-            <h3>Class Performance Overview</h3>
-            <div id="classMasteryOverview" class="grid" style="margin-bottom: 30px;">
-                <!-- Class mastery cards will be populated here -->
-            </div>
-            
             <h3>Add Students</h3>
             
-            <!-- Single Student Entry -->
+            <div style="margin-bottom: 20px;">
+                <h4>Add Sample Students for Testing</h4>
+                <button class="btn-warning" onclick="addSampleStudents()">Add Sample Students</button>
+                <button class="btn-secondary" onclick="clearAllStudents()">Clear All Students</button>
+            </div>
+            
             <div style="margin-bottom: 20px;">
                 <h4>Add Single Student</h4>
                 <input type="text" id="newStudentId" placeholder="Student ID" />
@@ -491,111 +461,11 @@
                 <button class="btn-primary" onclick="addStudent()">Add Student</button>
             </div>
             
-            <!-- CSV Upload -->
-            <div style="margin-bottom: 20px; padding: 20px; background: #f0f8ff; border-radius: 10px; border: 2px dashed #2196f3;">
-                <h4>Upload Students via CSV</h4>
-                <p style="margin: 10px 0; color: #666; font-size: 14px;">
-                    CSV should have columns: <strong>id, name, grade, class</strong><br>
-                    Example: 001,Alice Johnson,3,Math-3A
-                </p>
-                <input type="file" id="csvFileInput" accept=".csv" style="margin: 10px 0;" />
-                <br>
-                <button class="btn-success" onclick="uploadCSV()">Upload CSV</button>
-                <button class="btn-secondary" onclick="downloadSampleCSV()" style="margin-left: 10px;">Download Sample CSV</button>
-            </div>
-            
-            <div style="margin: 20px 0;">
-                <button class="btn-warning" onclick="addSampleStudents()" style="margin-right: 10px;">Add Sample Students</button>
-                <button class="btn-secondary" onclick="clearAllStudents()">Clear All Students</button>
-            </div>
-            
-            <!-- Smart Filters Section -->
-            <div class="filters-section">
-                <h3>Smart Filters</h3>
-                <div class="filters-grid">
-                    <div class="filter-group">
-                        <label for="classFilter">Filter by Class:</label>
-                        <select id="classFilter" onchange="applyFilters()">
-                            <option value="">All Classes</option>
-                        </select>
-                    </div>
-                    
-                    <div class="filter-group">
-                        <label for="gradeFilter">Filter by Grade:</label>
-                        <select id="gradeFilter" onchange="applyFilters()">
-                            <option value="">All Grades</option>
-                        </select>
-                    </div>
-                    
-                    <div class="filter-group">
-                        <label for="patternFilter">Filter by Problem Pattern:</label>
-                        <select id="patternFilter" onchange="applyFilters()">
-                            <option value="">All Patterns</option>
-                            <option value="pos_plus_pos">A + B (Positive + Positive)</option>
-                            <option value="pos_plus_neg">A + (-B) (Positive + Negative)</option>
-                            <option value="pos_minus_pos">A - B (Positive - Positive)</option>
-                            <option value="pos_minus_neg">A - (-B) (Positive - Negative)</option>
-                            <option value="neg_plus_pos">(-A) + B (Negative + Positive)</option>
-                            <option value="neg_plus_neg">(-A) + (-B) (Negative + Negative)</option>
-                            <option value="neg_minus_pos">(-A) - B (Negative - Positive)</option>
-                            <option value="neg_minus_neg">(-A) - (-B) (Negative - Negative)</option>
-                        </select>
-                    </div>
-                    
-                    <div class="filter-group">
-                        <label for="errorThreshold">Min Error Rate (%):</label>
-                        <select id="errorThreshold" onchange="applyFilters()">
-                            <option value="0">Any Error Rate</option>
-                            <option value="25">25%+ Errors</option>
-                            <option value="50">50%+ Errors</option>
-                            <option value="75">75%+ Errors</option>
-                        </select>
-                    </div>
-                </div>
-                
-                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-                    <button class="btn-warning" onclick="clearAllFilters()" style="padding: 10px 20px;">Clear All Filters</button>
-                    <div id="filterResults" style="font-weight: bold; color: #555;">Showing all students</div>
-                </div>
-            </div>
-            
             <h3>Students</h3>
             <div class="student-list" id="studentList"></div>
-            
-            <div id="studentProgress" class="hidden">
-                <h3 id="progressTitle"></h3>
-                <div class="grid">
-                    <div class="card">
-                        <h3>Mastery %</h3>
-                        <div class="number" id="studentMastery">0%</div>
-                    </div>
-                    <div class="card">
-                        <h3>Facts Practiced</h3>
-                        <div class="number" id="factsPracticed">0</div>
-                    </div>
-                    <div class="card">
-                        <h3>Total Mistakes</h3>
-                        <div class="number" id="totalMistakes">0</div>
-                    </div>
-                </div>
-                
-                <!-- Error Patterns Section -->
-                <div class="student-detail-section">
-                    <h3>Problem Analysis</h3>
-                    <div id="errorPatterns" class="error-patterns"></div>
-                </div>
-                
-                <!-- Recent Problems Section -->
-                <div class="student-detail-section">
-                    <h3>Last 25 Problems</h3>
-                    <div id="recentProblems" class="recent-problems"></div>
-                </div>
-            </div>
         </div>
     </div>
 
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
     <script>
         // Application State
         const TEACHER_PASSWORD = "MathTeacher2024!";
@@ -605,206 +475,100 @@
         let score = { correct: 0, total: 0 };
         let students = [];
         
-        // Firebase Configuration
-        const firebaseConfig = {
-            apiKey: "AIzaSyDc850NX40XMBTwcypsRy_1zNIm-dMqCzw",
-            authDomain: "math-facts-app-v1.firebaseapp.com",
-            projectId: "math-facts-app-v1",
-            storageBucket: "math-facts-app-v1.firebasestorage.app",
-            messagingSenderId: "797235830684",
-            appId: "1:797235830684:web:e7c569649fedf456733259",
-            measurementId: "G-MYV10DWB5M"
-        };
-
         // Utility Functions
         function updateStatus(type, message) {
             const statusEl = document.getElementById('status');
-            statusEl.className = `status ${type}`;
-            statusEl.textContent = message;
+            if (statusEl) {
+                statusEl.className = `status ${type}`;
+                statusEl.textContent = message;
+            }
         }
 
         function showScreen(screenId) {
             const screens = ['loginScreen', 'teacherLoginScreen', 'practiceScreen', 'teacherScreen'];
             screens.forEach(screen => {
-                document.getElementById(screen).classList.add('hidden');
+                const element = document.getElementById(screen);
+                if (element) {
+                    element.classList.add('hidden');
+                }
             });
-            document.getElementById(screenId).classList.remove('hidden');
+            const targetScreen = document.getElementById(screenId);
+            if (targetScreen) {
+                targetScreen.classList.remove('hidden');
+            }
         }
 
-        // Firebase Functions
+        // Try to initialize Firebase, fall back to local mode if it fails
         function initFirebase() {
             console.log('Starting Firebase initialization...');
-            try {
-                if (typeof firebase !== 'undefined') {
-                    firebase.initializeApp(firebaseConfig);
-                    db = firebase.firestore();
-                    console.log('Firebase initialized successfully');
-                    updateStatus('connected', 'Connected to Firebase');
-                    loadStudentsFromFirebase();
-                } else {
-                    console.log('Firebase not available, running in local mode');
-                    updateStatus('local', 'Running in local mode');
-                    db = null;
-                }
-            } catch (error) {
-                console.error('Firebase initialization failed:', error);
-                updateStatus('local', 'Running in local mode');
-                db = null;
-            }
+            updateStatus('local', 'Running in local mode (Firebase unavailable)');
+            db = null;
         }
 
-        async function loadStudentsFromFirebase() {
-            if (!db) return;
-            
-            try {
-                console.log('Attempting to load students from Firebase...');
-                const snapshot = await db.collection('students').get();
-                const firebaseStudents = [];
-                
-                snapshot.forEach(doc => {
-                    console.log('Found student document:', doc.id, doc.data());
-                    firebaseStudents.push({ id: doc.id, ...doc.data() });
-                });
-                
-                console.log('Total students loaded from Firebase:', firebaseStudents.length);
-                
-                if (firebaseStudents.length > 0) {
-                    students = firebaseStudents;
-                    updateStudentList();
-                    updateDashboardStats();
-                    populateFilterOptions();
-                } else {
-                    console.log('No students found in Firebase collection');
-                }
-            } catch (error) {
-                console.error('Error loading students from Firebase:', error);
-            }
+        // Student Mastery Display Functions
+        function updateStudentMasteryDisplay() {
+            displayEmptyMasteryBoxes();
         }
 
-        // Calculate category-based mastery system
-        function calculateCategoryMastery(attempts) {
-            const categories = {
-                'pos_plus_pos': 'Positive + Positive',
-                'pos_plus_neg': 'Positive + Negative', 
-                'pos_minus_pos': 'Positive - Positive',
-                'pos_minus_neg': 'Positive - Negative',
-                'neg_plus_pos': 'Negative + Positive',
-                'neg_plus_neg': 'Negative + Negative',
-                'neg_minus_pos': 'Negative - Positive',
-                'neg_minus_neg': 'Negative - Negative'
-            };
+        function displayStudentMasteryBoxes(categoryDetails) {
+            const masteryGrid = document.getElementById('masteryGrid');
+            if (!masteryGrid) return;
             
-            const categoryAttempts = {};
-            Object.keys(categories).forEach(category => {
-                categoryAttempts[category] = [];
-            });
-            
-            attempts.forEach(attempt => {
-                const category = categorizeProblem(attempt.problem);
-                if (category && categoryAttempts[category]) {
-                    categoryAttempts[category].push(attempt);
-                }
-            });
-            
-            let masteredCategories = 0;
-            const categoryDetails = {};
-            
-            Object.keys(categories).forEach(categoryKey => {
-                const categoryAttemptsList = categoryAttempts[categoryKey];
-                
-                const recentAttempts = categoryAttemptsList
-                    .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
-                    .slice(0, 5);
-                
-                const correctCount = recentAttempts.filter(a => a.isCorrect).length;
-                const totalCount = recentAttempts.length;
-                const isMastered = totalCount >= 5 && correctCount === 5;
-                
-                if (isMastered) {
-                    masteredCategories++;
-                }
-                
-                categoryDetails[categoryKey] = {
-                    name: categories[categoryKey],
-                    correct: correctCount,
-                    total: totalCount,
-                    mastered: isMastered,
-                    percentage: totalCount > 0 ? ((correctCount / totalCount) * 100).toFixed(1) : 0
-                };
-            });
-            
-            const overallMastery = ((masteredCategories / 8) * 100).toFixed(1);
-            
-            return {
-                percentage: overallMastery,
-                masteredCategories,
-                totalCategories: 8,
-                categoryDetails
-            };
-        }
-
-        function categorizeProblem(problemString) {
-            const parts = problemString.trim().split(/\s+/);
-            if (parts.length !== 3) return null;
-            
-            const num1 = parseInt(parts[0]);
-            const operation = parts[1];
-            const num2 = parseInt(parts[2]);
-            
-            if (isNaN(num1) || isNaN(num2)) return null;
-            
-            const num1Positive = num1 >= 0;
-            const num2Positive = num2 >= 0;
-            
-            if (operation === '+') {
-                if (num1Positive && num2Positive) return 'pos_plus_pos';
-                if (num1Positive && !num2Positive) return 'pos_plus_neg';
-                if (!num1Positive && num2Positive) return 'neg_plus_pos';
-                if (!num1Positive && !num2Positive) return 'neg_plus_neg';
-            } else if (operation === '-') {
-                if (num1Positive && num2Positive) return 'pos_minus_pos';
-                if (num1Positive && !num2Positive) return 'pos_minus_neg';
-                if (!num1Positive && num2Positive) return 'neg_minus_pos';
-                if (!num1Positive && !num2Positive) return 'neg_minus_neg';
-            }
-            
-            return null;
-        }
-
-        function displayCategoryMastery(categoryDetails) {
-            const categoryOrder = [
-                'pos_plus_pos', 'pos_plus_neg', 'pos_minus_pos', 'pos_minus_neg',
-                'neg_plus_pos', 'neg_plus_neg', 'neg_minus_pos', 'neg_minus_neg'
+            const categories = [
+                { key: 'pos_plus_pos', title: 'A + B' },
+                { key: 'pos_plus_neg', title: 'A + (-B)' },
+                { key: 'pos_minus_pos', title: 'A - B' },
+                { key: 'pos_minus_neg', title: 'A - (-B)' },
+                { key: 'neg_plus_pos', title: '(-A) + B' },
+                { key: 'neg_plus_neg', title: '(-A) + (-B)' },
+                { key: 'neg_minus_pos', title: '(-A) - B' },
+                { key: 'neg_minus_neg', title: '(-A) - (-B)' }
             ];
             
-            let html = '<h4 style="margin-bottom: 15px; color: #333;">Mastery by Problem Type (Need 5/5 of last 5 attempts to master)</h4>';
-            html += '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-bottom: 30px;">';
-            
-            categoryOrder.forEach(key => {
-                const details = categoryDetails[key];
-                const bgColor = details.mastered ? '#e8f5e8' : (details.total > 0 ? '#fff3e0' : '#f5f5f5');
-                const borderColor = details.mastered ? '#4caf50' : (details.total > 0 ? '#ff9800' : '#ccc');
-                const statusIcon = details.mastered ? '✅' : (details.total > 0 ? '⏳' : '⚪');
+            masteryGrid.innerHTML = categories.map(category => {
+                const details = categoryDetails[category.key] || { correct: 0, total: 0, mastered: false };
+                let statusClass, statusText, scoreText;
                 
-                html += `
-                    <div style="background: ${bgColor}; padding: 15px; border-radius: 8px; border: 2px solid ${borderColor}; text-align: center;">
-                        <div style="font-weight: bold; color: #333; margin-bottom: 8px; font-size: 0.9em;">${details.name}</div>
-                        <div style="font-size: 1.5em; font-weight: bold; margin: 8px 0;">
-                            ${statusIcon} ${details.correct}/${details.total}
-                        </div>
-                        <div style="font-size: 0.9em; color: #666;">
-                            ${details.mastered ? 'MASTERED!' : 
-                              details.total === 0 ? 'No attempts yet' :
-                              `${details.percentage}% correct`}
-                            ${details.total < 5 && details.total > 0 ? `<br><small>Need ${5 - details.total} more attempts</small>` : ''}
-                            ${details.total === 0 ? `<br><small>Need 5 attempts to check mastery</small>` : ''}
-                        </div>
+                if (details.mastered) {
+                    statusClass = 'mastered';
+                    statusText = 'MASTERED!';
+                    scoreText = `${details.correct}/${details.total}`;
+                } else if (details.total > 0) {
+                    statusClass = 'in-progress';
+                    statusText = details.total < 5 ? `Need ${5 - details.total} more` : 'In Progress';
+                    scoreText = `${details.correct}/${details.total}`;
+                } else {
+                    statusClass = 'not-started';
+                    statusText = 'Not Started';
+                    scoreText = '0/0';
+                }
+                
+                return `
+                    <div class="mastery-box ${statusClass}">
+                        <div class="mastery-title">${category.title}</div>
+                        <div class="mastery-score ${statusClass}">${scoreText}</div>
+                        <div class="mastery-status">${statusText}</div>
                     </div>
                 `;
-            });
+            }).join('');
+        }
+
+        function displayEmptyMasteryBoxes() {
+            const masteryGrid = document.getElementById('masteryGrid');
+            if (!masteryGrid) return;
             
-            html += '</div>';
-            return html;
+            const categories = [
+                'A + B', 'A + (-B)', 'A - B', 'A - (-B)',
+                '(-A) + B', '(-A) + (-B)', '(-A) - B', '(-A) - (-B)'
+            ];
+            
+            masteryGrid.innerHTML = categories.map(title => `
+                <div class="mastery-box not-started">
+                    <div class="mastery-title">${title}</div>
+                    <div class="mastery-score not-started">0/0</div>
+                    <div class="mastery-status">Not Started</div>
+                </div>
+            `).join('');
         }
 
         // Math Problem Generation
@@ -827,14 +591,23 @@
         // Student Login Functions
         function studentLogin() {
             const studentId = document.getElementById('studentId').value.trim();
+            if (!studentId) {
+                alert('Please enter a Student ID');
+                return;
+            }
+            
             const student = students.find(s => s.id === studentId);
             
             if (student) {
                 currentUser = student;
                 score = { correct: 0, total: 0 };
                 showScreen('practiceScreen');
-                document.getElementById('studentWelcome').textContent = `Welcome, ${student.name}!`;
+                const welcomeEl = document.getElementById('studentWelcome');
+                if (welcomeEl) {
+                    welcomeEl.textContent = `Welcome, ${student.name}!`;
+                }
                 updateScore();
+                updateStudentMasteryDisplay();
                 nextProblem();
             } else {
                 if (students.length === 0) {
@@ -848,38 +621,32 @@
 
         function nextProblem() {
             currentProblem = generateProblem();
-            document.getElementById('problem').textContent = currentProblem.display;
-            document.getElementById('answer').value = '';
-            document.getElementById('answer').focus();
+            const problemEl = document.getElementById('problem');
+            const answerEl = document.getElementById('answer');
+            
+            if (problemEl) {
+                problemEl.textContent = currentProblem.display;
+            }
+            if (answerEl) {
+                answerEl.value = '';
+                answerEl.focus();
+            }
             hideFeedback();
         }
 
-        async function submitAnswer() {
-            const userAnswer = parseInt(document.getElementById('answer').value);
-            if (isNaN(userAnswer)) return;
+        function submitAnswer() {
+            const answerEl = document.getElementById('answer');
+            if (!answerEl) return;
+            
+            const userAnswer = parseInt(answerEl.value);
+            if (isNaN(userAnswer)) {
+                alert('Please enter a number');
+                return;
+            }
 
             const isCorrect = userAnswer === currentProblem.answer;
             score.total++;
             if (isCorrect) score.correct++;
-            
-            if (db && currentUser) {
-                const problemData = {
-                    studentId: currentUser.id,
-                    problem: `${currentProblem.num1} ${currentProblem.operation} ${currentProblem.num2}`,
-                    correctAnswer: currentProblem.answer,
-                    studentAnswer: userAnswer,
-                    isCorrect: isCorrect,
-                    timestamp: new Date(),
-                    sessionScore: `${score.correct}/${score.total}`
-                };
-                
-                try {
-                    const docRef = await db.collection('problemAttempts').add(problemData);
-                    console.log('Problem attempt saved to Firebase with ID:', docRef.id);
-                } catch (error) {
-                    console.error('Error saving problem attempt:', error);
-                }
-            }
             
             updateScore();
             
@@ -892,18 +659,26 @@
         }
 
         function updateScore() {
-            document.getElementById('studentScore').textContent = `Score: ${score.correct}/${score.total}`;
+            const scoreEl = document.getElementById('studentScore');
+            if (scoreEl) {
+                scoreEl.textContent = `Score: ${score.correct}/${score.total}`;
+            }
         }
 
         function showFeedback(isCorrect, correctAnswer) {
             const feedbackEl = document.getElementById('feedback');
-            feedbackEl.className = `feedback ${isCorrect ? 'correct' : 'incorrect'}`;
-            feedbackEl.textContent = isCorrect ? 'Correct!' : `Not quite! The answer is ${correctAnswer}`;
-            feedbackEl.classList.remove('hidden');
+            if (feedbackEl) {
+                feedbackEl.className = `feedback ${isCorrect ? 'correct' : 'incorrect'}`;
+                feedbackEl.textContent = isCorrect ? 'Correct!' : `Not quite! The answer is ${correctAnswer}`;
+                feedbackEl.classList.remove('hidden');
+            }
         }
 
         function hideFeedback() {
-            document.getElementById('feedback').classList.add('hidden');
+            const feedbackEl = document.getElementById('feedback');
+            if (feedbackEl) {
+                feedbackEl.classList.add('hidden');
+            }
         }
 
         // Visual Feedback Functions
@@ -912,190 +687,90 @@
             const visualProblem = document.getElementById('visualProblem');
             const visualSolution = document.getElementById('visualSolution');
             
-            visualProblem.textContent = `${problem.num1} ${problem.operation} ${problem.num2} = ?`;
-            
-            let solutionHTML = '';
-            if (problem.operation === '+') {
-                solutionHTML = createAdditionVisual(problem.num1, problem.num2, problem.answer);
-            } else {
-                solutionHTML = createSubtractionVisual(problem.num1, problem.num2, problem.answer);
+            if (modal && visualProblem && visualSolution) {
+                visualProblem.textContent = `${problem.num1} ${problem.operation} ${problem.num2} = ?`;
+                
+                let solutionHTML = '';
+                if (problem.operation === '+') {
+                    solutionHTML = createAdditionVisual(problem.num1, problem.num2, problem.answer);
+                } else {
+                    solutionHTML = createSubtractionVisual(problem.num1, problem.num2, problem.answer);
+                }
+                
+                solutionHTML += `
+                    <div class="math-step" style="color: #f44336; margin-top: 20px;">
+                        You answered: ${userAnswer}
+                    </div>
+                    <div class="math-step" style="color: #4caf50;">
+                        Correct answer: ${problem.answer}
+                    </div>
+                `;
+                
+                visualSolution.innerHTML = solutionHTML;
+                modal.classList.remove('hidden');
             }
-            
-            solutionHTML += `
-                <div class="math-step" style="color: #f44336; margin-top: 20px;">
-                    You answered: ${userAnswer}
-                </div>
-                <div class="math-step" style="color: #4caf50;">
-                    Correct answer: ${problem.answer}
-                </div>
-            `;
-            
-            visualSolution.innerHTML = solutionHTML;
-            modal.classList.remove('hidden');
         }
 
         function createAdditionVisual(num1, num2, answer) {
             let html = '<div class="math-step">Let\'s add these numbers step by step:</div>';
-            html += '<div class="visual-blocks">';
-            
-            html += '<div class="block-group">';
-            html += '<div class="block-label">Starting with:</div>';
-            html += '<div class="blocks">';
-            for (let i = 0; i < Math.abs(num1); i++) {
-                html += `<div class="block ${num1 >= 0 ? 'positive' : 'negative'}"></div>`;
-            }
-            html += '</div>';
-            html += `<div style="margin-top: 5px;">${num1}</div>`;
-            html += '</div>';
-            
-            html += '<div class="operation-symbol">+</div>';
-            
-            html += '<div class="block-group">';
-            html += '<div class="block-label">Adding:</div>';
-            html += '<div class="blocks">';
-            for (let i = 0; i < Math.abs(num2); i++) {
-                html += `<div class="block ${num2 >= 0 ? 'positive' : 'negative'}"></div>`;
-            }
-            html += '</div>';
-            html += `<div style="margin-top: 5px;">${num2}</div>`;
-            html += '</div>';
-            
-            html += '<div class="operation-symbol">=</div>';
-            
-            html += '<div class="block-group">';
-            html += '<div class="block-label">Result:</div>';
-            if (answer === 0) {
-                html += '<div style="margin-top: 5px;">0</div>';
-            } else {
-                html += '<div class="blocks">';
-                for (let i = 0; i < Math.abs(answer); i++) {
-                    html += `<div class="block ${answer >= 0 ? 'positive' : 'negative'}"></div>`;
-                }
-                html += '</div>';
-                html += `<div style="margin-top: 5px;">${answer}</div>`;
-            }
-            html += '</div>';
-            html += '</div>';
-            
             html += `<div class="math-step" style="color: #2196f3; margin-top: 20px;">
                 ${num1} + ${num2} = ${answer}
             </div>`;
-            
             return html;
         }
 
         function createSubtractionVisual(num1, num2, answer) {
             let html = '<div class="math-step">Let\'s work through this subtraction step by step:</div>';
-            
             html += '<div class="math-step" style="color: #ff9800;">Subtracting is the same as adding the opposite!</div>';
-            
-            html += '<div class="visual-blocks">';
-            
-            html += '<div class="block-group">';
-            html += '<div class="block-label">Starting with:</div>';
-            html += '<div class="blocks">';
-            for (let i = 0; i < Math.abs(num1); i++) {
-                html += `<div class="block ${num1 >= 0 ? 'positive' : 'negative'}"></div>`;
-            }
-            html += '</div>';
-            html += `<div style="margin-top: 5px;">${num1}</div>`;
-            html += '</div>';
-            
-            html += '<div class="operation-symbol">-</div>';
-            
-            html += '<div class="block-group">';
-            html += '<div class="block-label">Subtracting:</div>';
-            html += '<div class="blocks">';
-            for (let i = 0; i < Math.abs(num2); i++) {
-                html += `<div class="block ${num2 >= 0 ? 'positive' : 'negative'}"></div>`;
-            }
-            html += '</div>';
-            html += `<div style="margin-top: 5px;">${num2}</div>`;
-            html += '</div>';
-            html += '</div>';
-            
-            html += '<div class="math-step" style="color: #2196f3; margin: 20px 0;">↓ This becomes ↓</div>';
-            html += `<div class="math-step">Subtracting ${num2} = Adding ${-num2}</div>`;
-            
-            html += '<div class="visual-blocks">';
-            
-            html += '<div class="block-group">';
-            html += '<div class="block-label">Starting with:</div>';
-            html += '<div class="blocks">';
-            for (let i = 0; i < Math.abs(num1); i++) {
-                html += `<div class="block ${num1 >= 0 ? 'positive' : 'negative'}"></div>`;
-            }
-            html += '</div>';
-            html += `<div style="margin-top: 5px;">${num1}</div>`;
-            html += '</div>';
-            
-            html += '<div class="operation-symbol">+</div>';
-            
-            html += '<div class="block-group">';
-            html += '<div class="block-label">Adding opposite:</div>';
-            html += '<div class="blocks">';
-            for (let i = 0; i < Math.abs(num2); i++) {
-                html += `<div class="block ${num2 >= 0 ? 'negative' : 'positive'}"></div>`;
-            }
-            html += '</div>';
-            html += `<div style="margin-top: 5px;">${num2 >= 0 ? '-' + num2 : '+' + Math.abs(num2)}</div>`;
-            html += '</div>';
-            
-            html += '<div class="operation-symbol">=</div>';
-            
-            html += '<div class="block-group">';
-            html += '<div class="block-label">Result:</div>';
-            if (answer === 0) {
-                html += '<div style="margin-top: 5px;">0</div>';
-            } else {
-                html += '<div class="blocks">';
-                for (let i = 0; i < Math.abs(answer); i++) {
-                    html += `<div class="block ${answer >= 0 ? 'positive' : 'negative'}"></div>`;
-                }
-                html += '</div>';
-                html += `<div style="margin-top: 5px;">${answer}</div>`;
-            }
-            html += '</div>';
-            
-            html += '</div>';
-            
             html += `
                 <div class="math-step" style="color: #4caf50; margin-top: 20px;">
                     Remember: ${num1} - ${num2} = ${num1} + (${-num2}) = ${answer}
                 </div>
             `;
-            
             return html;
         }
 
         function closeFeedbackModal() {
-            document.getElementById('feedbackModal').classList.add('hidden');
+            const modal = document.getElementById('feedbackModal');
+            if (modal) {
+                modal.classList.add('hidden');
+            }
             nextProblem();
         }
 
         // Teacher Functions
         function showTeacherLogin() {
             showScreen('teacherLoginScreen');
-            document.getElementById('teacherPassword').focus();
-            document.getElementById('loginError').classList.add('hidden');
+            const passwordEl = document.getElementById('teacherPassword');
+            const errorEl = document.getElementById('loginError');
+            if (passwordEl) passwordEl.focus();
+            if (errorEl) errorEl.classList.add('hidden');
         }
 
         function teacherLogin() {
-            const enteredPassword = document.getElementById('teacherPassword').value;
+            const passwordEl = document.getElementById('teacherPassword');
+            const errorEl = document.getElementById('loginError');
+            
+            if (!passwordEl) return;
+            
+            const enteredPassword = passwordEl.value;
             
             if (enteredPassword === TEACHER_PASSWORD) {
-                document.getElementById('teacherPassword').value = '';
+                passwordEl.value = '';
                 showTeacherDashboard();
             } else {
-                document.getElementById('loginError').classList.remove('hidden');
-                document.getElementById('teacherPassword').value = '';
-                document.getElementById('teacherPassword').focus();
+                if (errorEl) errorEl.classList.remove('hidden');
+                passwordEl.value = '';
+                passwordEl.focus();
             }
         }
 
         function backToMainLogin() {
-            document.getElementById('teacherPassword').value = '';
-            document.getElementById('loginError').classList.add('hidden');
+            const passwordEl = document.getElementById('teacherPassword');
+            const errorEl = document.getElementById('loginError');
+            
+            if (passwordEl) passwordEl.value = '';
+            if (errorEl) errorEl.classList.add('hidden');
             showScreen('loginScreen');
         }
 
@@ -1103,14 +778,20 @@
             showScreen('teacherScreen');
             updateStudentList();
             updateDashboardStats();
-            populateFilterOptions();
         }
 
-        async function addStudent() {
-            const id = document.getElementById('newStudentId').value.trim();
-            const name = document.getElementById('newStudentName').value.trim();
-            const grade = document.getElementById('newStudentGrade').value.trim();
-            const className = document.getElementById('newStudentClass').value.trim();
+        function addStudent() {
+            const idEl = document.getElementById('newStudentId');
+            const nameEl = document.getElementById('newStudentName');
+            const gradeEl = document.getElementById('newStudentGrade');
+            const classEl = document.getElementById('newStudentClass');
+            
+            if (!idEl || !nameEl || !gradeEl || !classEl) return;
+            
+            const id = idEl.value.trim();
+            const name = nameEl.value.trim();
+            const grade = gradeEl.value.trim();
+            const className = classEl.value.trim();
             
             if (id && name && grade) {
                 if (students.find(s => s.id === id)) {
@@ -1119,241 +800,20 @@
                 }
                 
                 const student = { id, name, grade, class: className || 'Unassigned' };
-                
-                if (db) {
-                    try {
-                        await db.collection('students').doc(id).set({
-                            name: student.name,
-                            grade: student.grade,
-                            class: student.class
-                        });
-                        console.log('Student saved to Firebase');
-                    } catch (error) {
-                        console.error('Error saving to Firebase:', error);
-                        alert('Student added locally, but could not save to Firebase. Check your connection.');
-                    }
-                }
-                
                 students.push(student);
                 
-                document.getElementById('newStudentId').value = '';
-                document.getElementById('newStudentName').value = '';
-                document.getElementById('newStudentGrade').value = '';
-                document.getElementById('newStudentClass').value = '';
+                idEl.value = '';
+                nameEl.value = '';
+                gradeEl.value = '';
+                classEl.value = '';
                 
                 updateStudentList();
                 updateDashboardStats();
-                populateFilterOptions();
                 
                 alert(`Student ${name} (ID: ${id}) added successfully!`);
             } else {
                 alert('Please fill in Student ID, Name, and Grade');
             }
-        }
-
-        // CSV Upload Functions
-        async function uploadCSV() {
-            const fileInput = document.getElementById('csvFileInput');
-            const file = fileInput.files[0];
-            
-            if (!file) {
-                alert('Please select a CSV file first.');
-                return;
-            }
-            
-            if (!file.name.toLowerCase().endsWith('.csv')) {
-                alert('Please select a valid CSV file.');
-                return;
-            }
-            
-            try {
-                const text = await file.text();
-                const lines = text.split('\n').filter(line => line.trim());
-                
-                if (lines.length === 0) {
-                    alert('The CSV file appears to be empty.');
-                    return;
-                }
-                
-                const newStudents = [];
-                const errors = [];
-                
-                // Parse header to map columns correctly - more robust detection
-                const firstLine = lines[0].toLowerCase().trim();
-                const headers = firstLine.split(',').map(h => h.trim().replace(/['"]/g, ''));
-                
-                console.log('CSV Headers detected:', headers);
-                
-                // Improved column mapping with exact matching first, then fuzzy matching
-                const columnMap = {};
-                
-                headers.forEach((header, index) => {
-                    const cleanHeader = header.toLowerCase().trim();
-                    
-                    // Exact matches first
-                    if (cleanHeader === 'id') {
-                        columnMap.id = index;
-                    } else if (cleanHeader === 'name') {
-                        columnMap.name = index;
-                    } else if (cleanHeader === 'grade') {
-                        columnMap.grade = index;
-                    } else if (cleanHeader === 'class') {
-                        columnMap.class = index;
-                    }
-                    // Fuzzy matches as fallback
-                    else if (cleanHeader.includes('id') && !columnMap.id) {
-                        columnMap.id = index;
-                    } else if (cleanHeader.includes('name') && !columnMap.name) {
-                        columnMap.name = index;
-                    } else if (cleanHeader.includes('grade') && !columnMap.grade) {
-                        columnMap.grade = index;
-                    } else if ((cleanHeader.includes('class') || cleanHeader.includes('room')) && !columnMap.class) {
-                        columnMap.class = index;
-                    }
-                });
-                
-                console.log('Column mapping detected:', columnMap);
-                console.log('Headers array:', headers);
-                
-                // Verify we found all required columns
-                if (columnMap.id === undefined || columnMap.name === undefined || columnMap.grade === undefined) {
-                    const missingFields = [];
-                    if (columnMap.id === undefined) missingFields.push('id');
-                    if (columnMap.name === undefined) missingFields.push('name');
-                    if (columnMap.grade === undefined) missingFields.push('grade');
-                    
-                    alert(`Could not find required columns: ${missingFields.join(', ')}\n\nYour CSV headers: ${headers.join(', ')}\n\nExpected: id, name, grade, class (in any order)`);
-                    return;
-                }
-                
-                // Process data rows (skip header)
-                for (let i = 1; i < lines.length; i++) {
-                    const line = lines[i].trim();
-                    if (!line) continue;
-                    
-                    // Better CSV parsing - handle quoted values with commas
-                    const parts = [];
-                    let current = '';
-                    let inQuotes = false;
-                    
-                    for (let j = 0; j < line.length; j++) {
-                        const char = line[j];
-                        if (char === '"') {
-                            inQuotes = !inQuotes;
-                        } else if (char === ',' && !inQuotes) {
-                            parts.push(current.trim().replace(/^"|"$/g, ''));
-                            current = '';
-                        } else {
-                            current += char;
-                        }
-                    }
-                    parts.push(current.trim().replace(/^"|"$/g, '')); // Add final part
-                    
-                    console.log(`Line ${i}: ${parts}`); // Debug logging
-                    
-                    if (parts.length < Math.max(columnMap.id, columnMap.name, columnMap.grade) + 1) {
-                        errors.push(`Line ${i + 1}: Not enough columns (found ${parts.length}, need ${Math.max(columnMap.id, columnMap.name, columnMap.grade) + 1})`);
-                        continue;
-                    }
-                    
-                    const id = parts[columnMap.id]?.toString().trim();
-                    const name = parts[columnMap.name]?.toString().trim();
-                    const grade = parts[columnMap.grade]?.toString().trim();
-                    const className = columnMap.class !== undefined ? parts[columnMap.class]?.toString().trim() : 'Unassigned';
-                    
-                    console.log(`Mapped data - ID: "${id}", Name: "${name}", Grade: "${grade}", Class: "${className}"`); // Debug
-                    
-                    if (!id || !name || !grade) {
-                        errors.push(`Line ${i + 1}: Missing required data (id: "${id}", name: "${name}", grade: "${grade}")`);
-                        continue;
-                    }
-                    
-                    // Check if student ID already exists
-                    if (students.find(s => s.id === id) || newStudents.find(s => s.id === id)) {
-                        errors.push(`Line ${i + 1}: Student ID "${id}" already exists`);
-                        continue;
-                    }
-                    
-                    newStudents.push({
-                        id: id,
-                        name: name,
-                        grade: grade,
-                        class: className || 'Unassigned'
-                    });
-                }
-                
-                console.log('Processed students:', newStudents); // Debug
-                
-                if (errors.length > 0) {
-                    console.log('Errors found:', errors);
-                    const proceed = confirm(`Found ${errors.length} error(s):\n\n${errors.slice(0, 5).join('\n')}${errors.length > 5 ? '\n...' : ''}\n\nDo you want to add the ${newStudents.length} valid students?`);
-                    
-                    if (!proceed) {
-                        return;
-                    }
-                }
-                
-                if (newStudents.length === 0) {
-                    alert('No valid students found in the CSV file.');
-                    return;
-                }
-                
-                // Add students to Firebase if connected
-                if (db) {
-                    try {
-                        const batch = db.batch();
-                        newStudents.forEach(student => {
-                            const docRef = db.collection('students').doc(student.id);
-                            batch.set(docRef, {
-                                name: student.name,
-                                grade: student.grade,
-                                class: student.class
-                            });
-                        });
-                        await batch.commit();
-                        console.log('Students saved to Firebase via batch');
-                    } catch (error) {
-                        console.error('Error saving students to Firebase:', error);
-                        alert('Students added locally, but could not save to Firebase. Check your connection.');
-                    }
-                }
-                
-                // Add to local array
-                students.push(...newStudents);
-                
-                // Update UI
-                updateStudentList();
-                updateDashboardStats();
-                populateFilterOptions();
-                
-                // Clear file input
-                fileInput.value = '';
-                
-                alert(`Successfully added ${newStudents.length} student(s)!${errors.length > 0 ? `\n(${errors.length} lines had errors and were skipped)` : ''}`);
-                
-            } catch (error) {
-                console.error('Error reading CSV file:', error);
-                alert('Error reading the CSV file. Please make sure it\'s a valid CSV format.');
-            }
-        }
-
-        function downloadSampleCSV() {
-            const csvContent = `id,name,grade,class
-001,Alice Johnson,3,Math-3A
-002,Bob Smith,3,Math-3A
-003,Carol Davis,4,Math-4B
-004,David Brown,3,Math-3B
-005,Emma Wilson,4,Math-4B`;
-            
-            const blob = new Blob([csvContent], { type: 'text/csv' });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'sample_students.csv';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            window.URL.revokeObjectURL(url);
         }
 
         function addSampleStudents() {
@@ -1378,7 +838,6 @@
                 if (addedCount > 0) {
                     updateStudentList();
                     updateDashboardStats();
-                    populateFilterOptions();
                     alert(`Added ${addedCount} sample student(s)!`);
                 } else {
                     alert('All sample students already exist in the system.');
@@ -1386,90 +845,28 @@
             }
         }
 
-        async function clearAllStudents() {
+        function clearAllStudents() {
             if (confirm('Are you sure you want to delete ALL students? This cannot be undone.')) {
-                if (db) {
-                    try {
-                        console.log('Deleting all students from Firebase...');
-                        
-                        const snapshot = await db.collection('students').get();
-                        
-                        if (!snapshot.empty) {
-                            const batch = db.batch();
-                            snapshot.forEach(doc => {
-                                batch.delete(doc.ref);
-                            });
-                            
-                            await batch.commit();
-                            console.log('All students deleted from Firebase');
-                        }
-                        
-                        const attemptsSnapshot = await db.collection('problemAttempts').get();
-                        if (!attemptsSnapshot.empty) {
-                            const attemptsBatch = db.batch();
-                            attemptsSnapshot.forEach(doc => {
-                                attemptsBatch.delete(doc.ref);
-                            });
-                            
-                            await attemptsBatch.commit();
-                            console.log('All problem attempts deleted from Firebase');
-                        }
-                        
-                    } catch (error) {
-                        console.error('Error deleting from Firebase:', error);
-                        alert('Students deleted locally, but there was an error deleting from Firebase: ' + error.message);
-                    }
-                }
-                
                 students = [];
                 updateStudentList();
                 updateDashboardStats();
-                populateFilterOptions();
-                document.getElementById('studentProgress').classList.add('hidden');
-                alert('All students and their data have been deleted.');
+                alert('All students have been deleted.');
             }
         }
 
-        async function deleteStudent(index) {
+        function deleteStudent(index) {
             const student = students[index];
-            if (confirm(`Are you sure you want to delete ${student.name} (ID: ${student.id})? This will also delete all their problem attempts.`)) {
-                if (db) {
-                    try {
-                        console.log('Deleting student from Firebase:', student.id);
-                        
-                        await db.collection('students').doc(student.id).delete();
-                        console.log('Student document deleted from Firebase');
-                        
-                        const attemptsSnapshot = await db.collection('problemAttempts')
-                            .where('studentId', '==', student.id)
-                            .get();
-                        
-                        if (!attemptsSnapshot.empty) {
-                            const batch = db.batch();
-                            attemptsSnapshot.forEach(doc => {
-                                batch.delete(doc.ref);
-                            });
-                            
-                            await batch.commit();
-                            console.log('Student problem attempts deleted from Firebase');
-                        }
-                        
-                    } catch (error) {
-                        console.error('Error deleting from Firebase:', error);
-                        alert('Student deleted locally, but there was an error deleting from Firebase: ' + error.message);
-                    }
-                }
-                
+            if (confirm(`Are you sure you want to delete ${student.name} (ID: ${student.id})?`)) {
                 students.splice(index, 1);
                 updateStudentList();
                 updateDashboardStats();
-                populateFilterOptions();
-                document.getElementById('studentProgress').classList.add('hidden');
             }
         }
 
         function updateStudentList() {
             const listEl = document.getElementById('studentList');
+            if (!listEl) return;
+            
             listEl.innerHTML = '';
             
             if (students.length === 0) {
@@ -1477,7 +874,6 @@
                 return;
             }
             
-            // Sort students alphabetically by name
             const sortedStudents = [...students].sort((a, b) => a.name.localeCompare(b.name));
             
             sortedStudents.forEach(student => {
@@ -1486,7 +882,7 @@
                 div.className = 'student-item';
                 div.innerHTML = `
                     <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <div onclick="showStudentProgress(students[${originalIndex}])" style="flex-grow: 1; cursor: pointer; min-width: 0;">
+                        <div style="flex-grow: 1; cursor: pointer; min-width: 0;">
                             <strong style="display: block; margin-bottom: 2px; word-wrap: break-word; white-space: normal;">${student.name}</strong>
                             <div style="font-size: 0.9em; color: #666;">
                                 ID: ${student.id} • Grade: ${student.grade} • Class: ${student.class}
@@ -1499,501 +895,35 @@
             });
         }
 
-        async function updateDashboardStats() {
-            document.getElementById('totalStudents').textContent = students.length;
+        function updateDashboardStats() {
+            const totalEl = document.getElementById('totalStudents');
+            const masteryEl = document.getElementById('averageMastery');
+            const activeEl = document.getElementById('activeToday');
             
-            if (students.length === 0) {
-                document.getElementById('averageMastery').textContent = '0%';
-                document.getElementById('activeToday').textContent = '0';
-                updateClassMasteryOverview();
-                return;
-            }
-            
-            if (!db) {
-                document.getElementById('averageMastery').textContent = 'N/A';
-                document.getElementById('activeToday').textContent = 'N/A';
-                updateClassMasteryOverview();
-                return;
-            }
-            
-            try {
-                let totalMastery = 0;
-                let studentsWithData = 0;
-                let activeToday = 0;
-                const today = new Date();
-                today.setHours(0, 0, 0, 0);
-                
-                const allAttemptsSnapshot = await db.collection('problemAttempts').get();
-                const allAttempts = [];
-                
-                allAttemptsSnapshot.forEach(doc => {
-                    const data = doc.data();
-                    if (data.timestamp && data.timestamp.toDate) {
-                        data.timestamp = data.timestamp.toDate();
-                    }
-                    allAttempts.push(data);
-                });
-                
-                for (const student of students) {
-                    const studentAttempts = allAttempts.filter(attempt => attempt.studentId === student.id);
-                    
-                    if (studentAttempts.length > 0) {
-                        const masteryResults = calculateCategoryMastery(studentAttempts);
-                        totalMastery += parseFloat(masteryResults.percentage);
-                        studentsWithData++;
-                        
-                        const todayAttempts = studentAttempts.filter(attempt => {
-                            const attemptDate = new Date(attempt.timestamp);
-                            attemptDate.setHours(0, 0, 0, 0);
-                            return attemptDate.getTime() === today.getTime();
-                        });
-                        
-                        if (todayAttempts.length > 0) {
-                            activeToday++;
-                        }
-                    }
-                }
-                
-                const averageMastery = studentsWithData > 0 ? (totalMastery / studentsWithData).toFixed(1) : 0;
-                document.getElementById('averageMastery').textContent = averageMastery + '%';
-                document.getElementById('activeToday').textContent = activeToday;
-                
-                await updateClassMasteryOverview(allAttempts);
-                
-            } catch (error) {
-                console.error('Error calculating dashboard stats:', error);
-                document.getElementById('averageMastery').textContent = 'Error';
-                document.getElementById('activeToday').textContent = 'Error';
-            }
+            if (totalEl) totalEl.textContent = students.length;
+            if (masteryEl) masteryEl.textContent = 'N/A';
+            if (activeEl) activeEl.textContent = 'N/A';
         }
 
-        async function updateClassMasteryOverview(allAttempts = null) {
-            const container = document.getElementById('classMasteryOverview');
-            
-            if (students.length === 0) {
-                container.innerHTML = '<div style="text-align: center; color: #666; font-style: italic;">No students added yet</div>';
-                return;
-            }
-            
-            const classes = [...new Set(students.map(s => s.class))].sort();
-            
-            if (!db || !allAttempts) {
-                container.innerHTML = classes.map(className => `
-                    <div class="card" style="min-width: 150px; flex: 1;">
-                        <h3>${className}</h3>
-                        <div class="number" style="font-size: 1.5em;">N/A</div>
-                        <div style="font-size: 0.8em; color: #666;">${students.filter(s => s.class === className).length} students</div>
-                    </div>
-                `).join('');
-                return;
-            }
-            
-            const classMasteryData = [];
-            
-            for (const className of classes) {
-                const classStudents = students.filter(s => s.class === className);
-                let totalClassMastery = 0;
-                let studentsWithData = 0;
-                
-                for (const student of classStudents) {
-                    const studentAttempts = allAttempts.filter(attempt => attempt.studentId === student.id);
-                    
-                    if (studentAttempts.length > 0) {
-                        const masteryResults = calculateCategoryMastery(studentAttempts);
-                        totalClassMastery += parseFloat(masteryResults.percentage);
-                        studentsWithData++;
-                    }
-                }
-                
-                const averageClassMastery = studentsWithData > 0 ? (totalClassMastery / studentsWithData).toFixed(1) : 0;
-                
-                classMasteryData.push({
-                    name: className,
-                    mastery: averageClassMastery,
-                    totalStudents: classStudents.length,
-                    studentsWithData: studentsWithData
-                });
-            }
-            
-            container.innerHTML = classMasteryData.map(classData => {
-                const masteryColor = classData.mastery >= 80 ? '#4caf50' : 
-                                   classData.mastery >= 60 ? '#ff9800' : '#f44336';
-                
-                return `
-                    <div class="card" style="min-width: 150px; flex: 1;">
-                        <h3>${classData.name}</h3>
-                        <div class="number" style="font-size: 1.5em; color: ${masteryColor};">
-                            ${classData.studentsWithData > 0 ? classData.mastery + '%' : 'No Data'}
-                        </div>
-                        <div style="font-size: 0.8em; color: #666;">
-                            ${classData.totalStudents} students
-                            ${classData.studentsWithData > 0 ? `<br>${classData.studentsWithData} with data` : ''}
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        }
-
-        function populateFilterOptions() {
-            const classFilter = document.getElementById('classFilter');
-            const gradeFilter = document.getElementById('gradeFilter');
-            
-            if (!classFilter || !gradeFilter) return;
-            
-            const classes = [...new Set(students.map(s => s.class))].sort();
-            const grades = [...new Set(students.map(s => s.grade))].sort();
-            
-            classFilter.innerHTML = '<option value="">All Classes</option>';
-            gradeFilter.innerHTML = '<option value="">All Grades</option>';
-            
-            classes.forEach(className => {
-                const option = document.createElement('option');
-                option.value = className;
-                option.textContent = className;
-                classFilter.appendChild(option);
-            });
-            
-            grades.forEach(grade => {
-                const option = document.createElement('option');
-                option.value = grade;
-                option.textContent = `Grade ${grade}`;
-                gradeFilter.appendChild(option);
-            });
-        }
-
-        // Filter Functions
-        async function applyFilters() {
-            const classFilter = document.getElementById('classFilter').value;
-            const gradeFilter = document.getElementById('gradeFilter').value;
-            const patternFilter = document.getElementById('patternFilter').value;
-            const errorThreshold = parseInt(document.getElementById('errorThreshold').value);
-            
-            let filteredStudents = students;
-            
-            if (classFilter || gradeFilter) {
-                filteredStudents = students.filter(student => {
-                    if (classFilter && student.class !== classFilter) {
-                        return false;
-                    }
-                    
-                    if (gradeFilter && student.grade !== gradeFilter) {
-                        return false;
-                    }
-                    
-                    return true;
-                });
-            }
-            
-            if ((patternFilter || errorThreshold > 0) && db) {
-                try {
-                    const snapshot = await db.collection('problemAttempts').get();
-                    const allAttempts = [];
-                    
-                    snapshot.forEach(doc => {
-                        const data = doc.data();
-                        if (data.timestamp && data.timestamp.toDate) {
-                            data.timestamp = data.timestamp.toDate();
-                        }
-                        allAttempts.push(data);
-                    });
-                    
-                    filteredStudents = await filterByPatternAndErrors(filteredStudents, allAttempts, patternFilter, errorThreshold);
-                } catch (error) {
-                    console.error('Error applying pattern/error filters:', error);
-                }
-            }
-            
-            updateFilteredStudentList(filteredStudents);
-            
-            const resultsText = `Showing ${filteredStudents.length} of ${students.length} students`;
-            document.getElementById('filterResults').textContent = resultsText;
-        }
-
-        async function filterByPatternAndErrors(studentsToFilter, allAttempts, patternFilter, errorThreshold) {
-            const filteredStudents = [];
-            
-            for (const student of studentsToFilter) {
-                const studentAttempts = allAttempts.filter(attempt => attempt.studentId === student.id);
-                
-                if (studentAttempts.length === 0 && (patternFilter || errorThreshold > 0)) {
-                    continue;
-                }
-                
-                let includeStudent = true;
-                
-                if (patternFilter) {
-                    const patternAttempts = studentAttempts.filter(attempt => {
-                        const category = categorizeProblem(attempt.problem);
-                        return category === patternFilter;
-                    });
-                    
-                    if (patternAttempts.length === 0) {
-                        includeStudent = false;
-                    } else if (errorThreshold > 0) {
-                        const errors = patternAttempts.filter(attempt => !attempt.isCorrect).length;
-                        const errorRate = (errors / patternAttempts.length) * 100;
-                        
-                        if (errorRate < errorThreshold) {
-                            includeStudent = false;
-                        }
-                    }
-                } else if (errorThreshold > 0) {
-                    const errors = studentAttempts.filter(attempt => !attempt.isCorrect).length;
-                    const errorRate = (errors / studentAttempts.length) * 100;
-                    
-                    if (errorRate < errorThreshold) {
-                        includeStudent = false;
-                    }
-                }
-                
-                if (includeStudent) {
-                    filteredStudents.push(student);
-                }
-            }
-            
-            return filteredStudents;
-        }
-
-        function updateFilteredStudentList(filteredStudents) {
-            const listEl = document.getElementById('studentList');
-            listEl.innerHTML = '';
-            
-            if (filteredStudents.length === 0) {
-                listEl.innerHTML = '<div style="text-align: center; padding: 20px; color: #666; font-style: italic;">No students match the current filter criteria.</div>';
-                return;
-            }
-            
-            // Sort filtered students alphabetically by name
-            const sortedFilteredStudents = [...filteredStudents].sort((a, b) => a.name.localeCompare(b.name));
-            
-            sortedFilteredStudents.forEach(student => {
-                const div = document.createElement('div');
-                div.className = 'student-item';
-                div.innerHTML = `
-                    <strong>${student.name}</strong><br>
-                    ID: ${student.id} • Grade: ${student.grade} • Class: ${student.class}
-                `;
-                div.onclick = () => showStudentProgress(student);
-                listEl.appendChild(div);
-            });
-        }
-
-        function clearAllFilters() {
-            document.getElementById('classFilter').value = '';
-            document.getElementById('gradeFilter').value = '';
-            document.getElementById('patternFilter').value = '';
-            document.getElementById('errorThreshold').value = '0';
-            
-            updateStudentList();
-            document.getElementById('filterResults').textContent = `Showing ${students.length} of ${students.length} students`;
-        }
-
-        // Student Progress Functions
-        async function showStudentProgress(student) {
-            document.getElementById('progressTitle').textContent = `${student.name}'s Progress`;
-            document.getElementById('studentProgress').classList.remove('hidden');
-            
-            document.querySelectorAll('.student-item').forEach(item => {
-                item.classList.remove('selected');
-            });
-            
-            event.target.closest('.student-item').classList.add('selected');
-            
-            if (db) {
-                await loadRealStudentProgress(student.id);
-            } else {
-                generateSampleAnalytics(student);
-            }
-        }
-
-        async function loadRealStudentProgress(studentId) {
-            try {
-                console.log('Loading real progress for student:', studentId);
-                
-                const snapshot = await db.collection('problemAttempts')
-                    .where('studentId', '==', studentId)
-                    .get();
-                
-                const attempts = [];
-                snapshot.forEach(doc => {
-                    const data = doc.data();
-                    if (data.timestamp && data.timestamp.toDate) {
-                        data.timestamp = data.timestamp.toDate();
-                    }
-                    attempts.push(data);
-                });
-                
-                attempts.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-                
-                console.log('Found', attempts.length, 'problem attempts');
-                
-                if (attempts.length === 0) {
-                    document.getElementById('studentMastery').textContent = '0%';
-                    document.getElementById('factsPracticed').textContent = '0';
-                    document.getElementById('totalMistakes').textContent = '0';
-                    
-                    document.getElementById('errorPatterns').innerHTML = '<div style="text-align: center; padding: 20px; color: #666;">No problem attempts yet. Student needs to practice first!</div>';
-                    document.getElementById('recentProblems').innerHTML = '<div style="text-align: center; padding: 20px; color: #666;">No problems attempted yet.</div>';
-                    return;
-                }
-                
-                const totalAttempts = attempts.length;
-                const correctAttempts = attempts.filter(a => a.isCorrect).length;
-                const incorrectAttempts = totalAttempts - correctAttempts;
-                const masteryResults = calculateCategoryMastery(attempts);
-                
-                document.getElementById('studentMastery').textContent = masteryResults.percentage + '%';
-                document.getElementById('factsPracticed').textContent = totalAttempts;
-                document.getElementById('totalMistakes').textContent = incorrectAttempts;
-                
-                const html = displayCategoryMastery(masteryResults.categoryDetails);
-                document.getElementById('errorPatterns').innerHTML = html;
-                
-                const recentAttempts = attempts.slice(0, 25);
-                const recentProblemsDiv = document.getElementById('recentProblems');
-                recentProblemsDiv.innerHTML = `
-                    <table class="problem-table">
-                        <thead>
-                            <tr>
-                                <th>Problem</th>
-                                <th>Student Answer</th>
-                                <th>Correct Answer</th>
-                                <th>Result</th>
-                                <th>Time</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${recentAttempts.map(attempt => `
-                                <tr>
-                                    <td><strong>${attempt.problem} = ?</strong></td>
-                                    <td class="${attempt.isCorrect ? 'correct-answer' : 'incorrect-answer'}">${attempt.studentAnswer}</td>
-                                    <td>${attempt.correctAnswer}</td>
-                                    <td>${attempt.isCorrect ? 'Correct' : 'Wrong'}</td>
-                                    <td class="timestamp">${new Date(attempt.timestamp).toLocaleString()}</td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                `;
-                
-            } catch (error) {
-                console.error('Error loading student progress:', error);
-                
-                document.getElementById('studentMastery').textContent = 'Error';
-                document.getElementById('factsPracticed').textContent = 'Error';
-                document.getElementById('totalMistakes').textContent = 'Error';
-                
-                document.getElementById('errorPatterns').innerHTML = `
-                    <div style="text-align: center; padding: 20px; color: #f44336;">
-                        <strong>Error loading student data:</strong><br>
-                        ${error.message}<br><br>
-                        Check the browser console for more details.
-                    </div>
-                `;
-                document.getElementById('recentProblems').innerHTML = `
-                    <div style="text-align: center; padding: 20px; color: #f44336;">
-                        Unable to load problem history. Check console for error details.
-                    </div>
-                `;
-            }
-        }
-
-        function generateSampleAnalytics(student) {
-            document.getElementById('studentMastery').textContent = '67.3%';
-            document.getElementById('factsPracticed').textContent = '84';
-            document.getElementById('totalMistakes').textContent = '23';
-            
-            const samplePatterns = [
-                { problem: '-3-7', errorRate: '78.6', errors: 11, attempts: 14 },
-                { problem: '4--5', errorRate: '71.4', errors: 5, attempts: 7 },
-                { problem: '-8+2', errorRate: '60.0', errors: 6, attempts: 10 },
-                { problem: '1-9', errorRate: '55.6', errors: 5, attempts: 9 },
-                { problem: '-2-6', errorRate: '50.0', errors: 4, attempts: 8 },
-                { problem: '3--4', errorRate: '45.5', errors: 5, attempts: 11 }
-            ];
-            
-            const errorPatternsDiv = document.getElementById('errorPatterns');
-            errorPatternsDiv.innerHTML = samplePatterns.map(pattern => `
-                <div class="pattern-card">
-                    <div class="pattern-problem">${pattern.problem.replace(/(\+|\-)/g, ' $1 ')} = ?</div>
-                    <div class="pattern-stats">
-                        ${pattern.errors} errors out of ${pattern.attempts} attempts<br>
-                        <strong>${pattern.errorRate}% error rate</strong>
-                    </div>
-                </div>
-            `).join('');
-            
-            generateSampleRecentProblems();
-        }
-
-        function generateSampleRecentProblems() {
-            const sampleProblems = [];
-            const operations = ['+', '-'];
-            
-            for (let i = 0; i < 25; i++) {
-                const num1 = Math.floor(Math.random() * 21) - 10;
-                const num2 = Math.floor(Math.random() * 21) - 10;
-                const operation = operations[Math.floor(Math.random() * operations.length)];
-                const correctAnswer = operation === '+' ? num1 + num2 : num1 - num2;
-                const isCorrect = Math.random() > 0.25;
-                const studentAnswer = isCorrect ? correctAnswer : correctAnswer + Math.floor(Math.random() * 5) - 2;
-                
-                const timeAgo = Math.floor(Math.random() * 1440);
-                const timestamp = new Date(Date.now() - timeAgo * 60000);
-                
-                sampleProblems.push({
-                    problem: `${num1} ${operation} ${num2}`,
-                    correctAnswer,
-                    studentAnswer,
-                    isCorrect,
-                    timestamp: timestamp.toLocaleString()
-                });
-            }
-            
-            const recentProblemsDiv = document.getElementById('recentProblems');
-            recentProblemsDiv.innerHTML = `
-                <table class="problem-table">
-                    <thead>
-                        <tr>
-                            <th>Problem</th>
-                            <th>Student Answer</th>
-                            <th>Correct Answer</th>
-                            <th>Result</th>
-                            <th>Time</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${sampleProblems.map(p => `
-                            <tr>
-                                <td><strong>${p.problem} = ?</strong></td>
-                                <td class="${p.isCorrect ? 'correct-answer' : 'incorrect-answer'}">${p.studentAnswer}</td>
-                                <td>${p.correctAnswer}</td>
-                                <td>${p.isCorrect ? 'Correct' : 'Wrong'}</td>
-                                <td class="timestamp">${p.timestamp}</td>
-                            </tr>
-                        `).join('')}
-                    </tbody>
-                </table>
-            `;
-        }
-
-        // General Functions
         function logout() {
             currentUser = null;
             currentProblem = null;
             score = { correct: 0, total: 0 };
             showScreen('loginScreen');
-            document.getElementById('studentProgress').classList.add('hidden');
         }
 
         // Event Listeners
         document.addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
-                if (!document.getElementById('practiceScreen').classList.contains('hidden')) {
+                const practiceScreen = document.getElementById('practiceScreen');
+                const loginScreen = document.getElementById('loginScreen');
+                const teacherLoginScreen = document.getElementById('teacherLoginScreen');
+                
+                if (practiceScreen && !practiceScreen.classList.contains('hidden')) {
                     submitAnswer();
-                } else if (!document.getElementById('loginScreen').classList.contains('hidden')) {
+                } else if (loginScreen && !loginScreen.classList.contains('hidden')) {
                     studentLogin();
-                } else if (!document.getElementById('teacherLoginScreen').classList.contains('hidden')) {
+                } else if (teacherLoginScreen && !teacherLoginScreen.classList.contains('hidden')) {
                     teacherLogin();
                 }
             }
@@ -2003,6 +933,12 @@
         window.addEventListener('load', function() {
             console.log('Page loaded, initializing application...');
             initFirebase();
+        });
+
+        // Global error handler to catch any JavaScript errors
+        window.addEventListener('error', function(e) {
+            console.error('JavaScript error:', e.error);
+            updateStatus('local', 'Error detected - running in basic mode');
         });
     </script>
 </body>
