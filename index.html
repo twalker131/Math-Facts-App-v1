@@ -1,1 +1,938 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Math Facts Tracker - Optimized</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        h1 { color: #333; margin-bottom: 30px; font-size: 2.5em; }
+        .status {
+            margin: 20px 0;
+            padding: 10px;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .status.connected { background: #e8f5e8; color: #2e7d32; border: 1px solid #4caf50; }
+        .status.connecting { background: #fff3e0; color: #f57f17; border: 1px solid #ff9800; }
+        .status.local { background: #fce4ec; color: #c2185b; border: 1px solid #e91e63; }
+        
+        input[type="text"], input[type="number"], input[type="password"] {
+            padding: 15px;
+            font-size: 18px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            width: 200px;
+            margin: 10px;
+            text-align: center;
+        }
+        button {
+            padding: 15px 25px;
+            font-size: 18px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 10px;
+            font-weight: bold;
+        }
+        .btn-primary { background: #2196f3; color: white; }
+        .btn-success { background: #4caf50; color: white; }
+        .btn-secondary { background: #757575; color: white; }
+        .btn-warning { background: #ff9800; color: white; }
+        button:hover { opacity: 0.9; }
+        button:disabled { background: #ccc; cursor: not-allowed; opacity: 0.6; }
+        
+        .problem {
+            font-size: 4em;
+            margin: 30px 0;
+            color: #333;
+            font-weight: bold;
+        }
+        .feedback {
+            font-size: 2em;
+            margin: 20px 0;
+            font-weight: bold;
+        }
+        .feedback.correct { color: #4caf50; }
+        .feedback.incorrect { color: #f44336; }
+        
+        .feedback-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .feedback-content {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            max-width: min(90vw, 800px);
+            max-height: min(90vh, 600px);
+            width: 100%;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            overflow-y: auto;
+            box-sizing: border-box;
+        }
+        
+        .mastery-display {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f9f9f9;
+            border-radius: 10px;
+            border: 1px solid #e0e0e0;
+        }
+        .mastery-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            margin-top: 10px;
+        }
+        .mastery-box {
+            padding: 8px;
+            border-radius: 6px;
+            border: 2px solid;
+            text-align: center;
+            font-size: 0.8em;
+        }
+        .mastery-box.mastered { background: #e8f5e8; border-color: #4caf50; }
+        .mastery-box.progress { background: #fff3e0; border-color: #ff9800; }
+        .mastery-box.none { background: #f5f5f5; border-color: #ddd; }
+        
+        .student-list {
+            text-align: left;
+            max-height: 400px;
+            overflow-y: auto;
+            margin: 20px 0;
+        }
+        .student-item {
+            padding: 10px;
+            border: 1px solid #ddd;
+            margin: 5px 0;
+            border-radius: 5px;
+            cursor: pointer;
+            background: #f9f9f9;
+        }
+        .student-item:hover { background: #e3f2fd; }
+        .student-item.selected { background: #bbdefb; border-color: #2196f3; }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .card {
+            background: #f5f5f5;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        .card h3 { margin: 0 0 10px 0; color: #333; }
+        .card .number { font-size: 2em; font-weight: bold; color: #2196f3; }
+        
+        .hidden { display: none; }
+        
+        .load-button {
+            background: #2196f3;
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 20px 0;
+        }
+        .load-button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .cache-info {
+            font-size: 0.9em;
+            color: #666;
+            margin: 10px 0;
+            font-style: italic;
+        }
+        
+        .collapsible {
+            background: #f0f0f0;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            cursor: pointer;
+        }
+        .collapsible:hover { background: #e0e0e0; }
+        .collapsible-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+        .collapsible-content.open {
+            max-height: 1000px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Math Facts Tracker</h1>
+        
+        <div id="status" class="status connecting">Connecting to Firebase...</div>
+        
+        <!-- Login Screen -->
+        <div id="loginScreen">
+            <h2>Student Login</h2>
+            <input type="text" id="studentId" placeholder="Enter Student ID" />
+            <br>
+            <button class="btn-primary" onclick="studentLogin()">Start Practice</button>
+            <br><br>
+            <button class="btn-success" onclick="showTeacherLogin()">Teacher Dashboard</button>
+        </div>
+        
+        <!-- Teacher Login Screen -->
+        <div id="teacherLoginScreen" class="hidden">
+            <h2>Teacher Login</h2>
+            <p>Enter the teacher password</p>
+            <input type="password" id="teacherPassword" placeholder="Password" />
+            <br>
+            <button class="btn-primary" onclick="teacherLogin()">Login</button>
+            <button class="btn-secondary" onclick="backToMainLogin()">Back</button>
+        </div>
+        
+        <!-- Student Practice Screen -->
+        <div id="practiceScreen" class="hidden">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h2 id="studentWelcome"></h2>
+                    <p id="studentScore">Score: 0/0</p>
+                </div>
+                <button class="btn-secondary" onclick="logout()">Logout</button>
+            </div>
+            
+            <div class="mastery-display">
+                <h3 style="margin: 0 0 10px 0;">Your Mastery Progress</h3>
+                <div id="studentMasteryGrid" class="mastery-grid"></div>
+            </div>
+            
+            <div id="problemArea">
+                <div class="problem" id="problem"></div>
+                <input type="number" id="answer" placeholder="?" style="font-size: 2em; width: 150px;" />
+                <br>
+                <button class="btn-primary" onclick="submitAnswer()">Submit Answer</button>
+            </div>
+            
+            <div id="feedback" class="feedback hidden"></div>
+        </div>
+        
+        <!-- Visual Feedback Modal -->
+        <div id="feedbackModal" class="feedback-modal hidden">
+            <div class="feedback-content">
+                <div style="font-size: 1.8em; color: #f44336; margin-bottom: 20px; font-weight: bold;">
+                    Let's work through this together!
+                </div>
+                <div id="visualSolution"></div>
+                <button class="btn-success" onclick="closeFeedbackModal()">OK, I understand!</button>
+            </div>
+        </div>
+        
+        <!-- Teacher Dashboard -->
+        <div id="teacherScreen" class="hidden">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h2>Teacher Dashboard</h2>
+                <button class="btn-secondary" onclick="logout()">Logout</button>
+            </div>
+            
+            <div class="cache-info" id="cacheInfo">
+                Click "Load Statistics" to view student data
+            </div>
+            
+            <button id="loadStatsBtn" class="load-button" onclick="loadDashboardStats()">
+                Load Statistics
+            </button>
+            
+            <div id="dashboardStats" class="hidden">
+                <div class="grid">
+                    <div class="card">
+                        <h3>Total Students</h3>
+                        <div class="number" id="totalStudents">0</div>
+                    </div>
+                    <div class="card">
+                        <h3>Average Mastery</h3>
+                        <div class="number" id="averageMastery">0%</div>
+                    </div>
+                    <div class="card">
+                        <h3>Active Today</h3>
+                        <div class="number" id="activeToday">0</div>
+                    </div>
+                </div>
+            </div>
+            
+            <h3>Students</h3>
+            <div class="student-list" id="studentList"></div>
+            
+            <div id="studentProgress" class="hidden">
+                <h3 id="progressTitle"></h3>
+                
+                <div id="summarySection"></div>
+                
+                <div class="collapsible" onclick="toggleProblemHistory()">
+                    <strong>📊 View Problem History</strong> (click to expand)
+                </div>
+                <div id="problemHistoryContent" class="collapsible-content">
+                    <div id="problemHistory"></div>
+                </div>
+            </div>
+        </div>
+    </div>
 
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script>
+        // Configuration
+        const TEACHER_PASSWORD = "MathTeacher2024!";
+        const CACHE_DURATION = 4 * 60 * 60 * 1000; // 4 hours
+        const REFRESH_COOLDOWN = 5 * 60 * 1000; // 5 minutes
+        
+        // Application State
+        let db = null;
+        let currentUser = null;
+        let currentProblem = null;
+        let score = { correct: 0, total: 0 };
+        let students = [];
+        let sessionMasteryData = null; // In-memory cache
+        let lastRefreshTime = 0;
+        
+        const firebaseConfig = {
+            apiKey: "AIzaSyDc850NX40XMBTwcypsRy_1zNIm-dMqCzw",
+            authDomain: "math-facts-app-v1.firebaseapp.com",
+            projectId: "math-facts-app-v1",
+            storageBucket: "math-facts-app-v1.firebasestorage.app",
+            messagingSenderId: "797235830684",
+            appId: "1:797235830684:web:e7c569649fedf456733259",
+            measurementId: "G-MYV10DWB5M"
+        };
+
+        // Cache Management
+        function getCachedData(key) {
+            try {
+                const cached = sessionStorage.getItem(key);
+                if (!cached) return null;
+                
+                const { data, timestamp } = JSON.parse(cached);
+                if (Date.now() - timestamp > CACHE_DURATION) {
+                    sessionStorage.removeItem(key);
+                    return null;
+                }
+                return data;
+            } catch (e) {
+                return null;
+            }
+        }
+
+        function setCachedData(key, data) {
+            try {
+                sessionStorage.setItem(key, JSON.stringify({
+                    data,
+                    timestamp: Date.now()
+                }));
+            } catch (e) {
+                console.error('Cache error:', e);
+            }
+        }
+
+        // Utility Functions
+        function updateStatus(type, message) {
+            const statusEl = document.getElementById('status');
+            statusEl.className = `status ${type}`;
+            statusEl.textContent = message;
+        }
+
+        function showScreen(screenId) {
+            ['loginScreen', 'teacherLoginScreen', 'practiceScreen', 'teacherScreen'].forEach(screen => {
+                document.getElementById(screen).classList.add('hidden');
+            });
+            document.getElementById(screenId).classList.remove('hidden');
+        }
+
+        // Firebase Initialization
+        function initFirebase() {
+            try {
+                if (typeof firebase !== 'undefined') {
+                    firebase.initializeApp(firebaseConfig);
+                    db = firebase.firestore();
+                    updateStatus('connected', 'Connected to Firebase');
+                    loadStudentsFromFirebase();
+                } else {
+                    updateStatus('local', 'Running in local mode');
+                }
+            } catch (error) {
+                console.error('Firebase init failed:', error);
+                updateStatus('local', 'Running in local mode');
+            }
+        }
+
+        async function loadStudentsFromFirebase() {
+            if (!db) return;
+            
+            // Check cache first
+            const cached = getCachedData('studentList');
+            if (cached) {
+                students = cached;
+                console.log('Loaded students from cache');
+                return;
+            }
+            
+            try {
+                const snapshot = await db.collection('students').get();
+                students = [];
+                snapshot.forEach(doc => {
+                    students.push({ id: doc.id, ...doc.data() });
+                });
+                setCachedData('studentList', students);
+                console.log(`Loaded ${students.length} students from Firebase`);
+            } catch (error) {
+                console.error('Error loading students:', error);
+            }
+        }
+
+        // Mastery Calculation
+        function calculateCategoryMastery(attempts) {
+            const categories = {
+                'pos_plus_pos': 'A+B',
+                'pos_plus_neg': 'A+(-B)',
+                'pos_minus_pos': 'A-B',
+                'pos_minus_neg': 'A-(-B)',
+                'neg_plus_pos': '(-A)+B',
+                'neg_plus_neg': '(-A)+(-B)',
+                'neg_minus_pos': '(-A)-B',
+                'neg_minus_neg': '(-A)-(-B)'
+            };
+            
+            const categoryAttempts = {};
+            Object.keys(categories).forEach(cat => categoryAttempts[cat] = []);
+            
+            attempts.forEach(attempt => {
+                const category = categorizeProblem(attempt.problem);
+                if (category && categoryAttempts[category]) {
+                    categoryAttempts[category].push(attempt);
+                }
+            });
+            
+            let masteredCount = 0;
+            const categoryDetails = {};
+            
+            Object.keys(categories).forEach(catKey => {
+                const catAttempts = categoryAttempts[catKey]
+                    .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+                    .slice(0, 5);
+                
+                const correctCount = catAttempts.filter(a => a.isCorrect).length;
+                const totalCount = catAttempts.length;
+                const isMastered = totalCount >= 5 && correctCount === 5;
+                
+                if (isMastered) masteredCount++;
+                
+                categoryDetails[catKey] = {
+                    name: categories[catKey],
+                    correct: correctCount,
+                    total: totalCount,
+                    mastered: isMastered
+                };
+            });
+            
+            return {
+                percentage: ((masteredCount / 8) * 100).toFixed(1),
+                masteredCategories: masteredCount,
+                categoryDetails
+            };
+        }
+
+        function categorizeProblem(problemString) {
+            const parts = problemString.trim().split(/\s+/);
+            if (parts.length !== 3) return null;
+            
+            const num1 = parseInt(parts[0]);
+            const operation = parts[1];
+            const num2 = parseInt(parts[2]);
+            
+            if (isNaN(num1) || isNaN(num2)) return null;
+            
+            const num1Pos = num1 >= 0;
+            const num2Pos = num2 >= 0;
+            
+            if (operation === '+') {
+                if (num1Pos && num2Pos) return 'pos_plus_pos';
+                if (num1Pos && !num2Pos) return 'pos_plus_neg';
+                if (!num1Pos && num2Pos) return 'neg_plus_pos';
+                return 'neg_plus_neg';
+            } else if (operation === '-') {
+                if (num1Pos && num2Pos) return 'pos_minus_pos';
+                if (num1Pos && !num2Pos) return 'pos_minus_neg';
+                if (!num1Pos && num2Pos) return 'neg_minus_pos';
+                return 'neg_minus_neg';
+            }
+            return null;
+        }
+
+        // Student Functions
+        async function studentLogin() {
+            const studentId = document.getElementById('studentId').value.trim();
+            const student = students.find(s => s.id === studentId);
+            
+            if (!student) {
+                alert('Student ID not found!');
+                return;
+            }
+            
+            currentUser = student;
+            score = { correct: 0, total: 0 };
+            showScreen('practiceScreen');
+            document.getElementById('studentWelcome').textContent = `Welcome, ${student.name}!`;
+            
+            await loadStudentMasteryData();
+            nextProblem();
+        }
+
+        async function loadStudentMasteryData() {
+            if (!db || !currentUser) return;
+            
+            try {
+                // Load only last 20 attempts (enough for 8 categories × 5 attempts with some overlap)
+                const snapshot = await db.collection('problemAttempts')
+                    .where('studentId', '==', currentUser.id)
+                    .orderBy('timestamp', 'desc')
+                    .limit(20)
+                    .get();
+                
+                const attempts = [];
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    if (data.timestamp && data.timestamp.toDate) {
+                        data.timestamp = data.timestamp.toDate();
+                    }
+                    attempts.push(data);
+                });
+                
+                sessionMasteryData = attempts;
+                updateMasteryDisplay();
+                console.log(`Loaded ${attempts.length} attempts for mastery calculation`);
+            } catch (error) {
+                console.error('Error loading mastery data:', error);
+            }
+        }
+
+        function updateMasteryDisplay() {
+            if (!sessionMasteryData) return;
+            
+            const masteryResults = calculateCategoryMastery(sessionMasteryData);
+            const grid = document.getElementById('studentMasteryGrid');
+            
+            const categoryOrder = [
+                'pos_plus_pos', 'pos_plus_neg', 'pos_minus_pos', 'pos_minus_neg',
+                'neg_plus_pos', 'neg_plus_neg', 'neg_minus_pos', 'neg_minus_neg'
+            ];
+            
+            grid.innerHTML = categoryOrder.map(key => {
+                const details = masteryResults.categoryDetails[key];
+                const status = details.mastered ? 'mastered' : (details.total > 0 ? 'progress' : 'none');
+                const icon = details.mastered ? '✅' : (details.total > 0 ? '⏳' : '⭕');
+                
+                return `
+                    <div class="mastery-box ${status}">
+                        <div style="font-weight: bold; font-size: 0.9em;">${details.name}</div>
+                        <div style="font-size: 1.2em; margin: 5px 0;">${icon} ${details.correct}/${details.total}</div>
+                        <div style="font-size: 0.8em;">${details.mastered ? 'Mastered!' : (details.total < 5 ? `Need ${5 - details.total} more` : 'Keep going!')}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function updateMasteryAfterProblem(newAttempt) {
+            if (!sessionMasteryData) return;
+            
+            // Add new attempt to cache
+            sessionMasteryData.unshift(newAttempt);
+            
+            // Keep only relevant attempts (trim to 40 max)
+            if (sessionMasteryData.length > 40) {
+                sessionMasteryData = sessionMasteryData.slice(0, 40);
+            }
+            
+            // Update display from cache (no Firebase read)
+            updateMasteryDisplay();
+        }
+
+        function generateProblem() {
+            const num1 = Math.floor(Math.random() * 21) - 10;
+            const num2 = Math.floor(Math.random() * 21) - 10;
+            const operation = Math.random() < 0.5 ? '+' : '-';
+            const answer = operation === '+' ? num1 + num2 : num1 - num2;
+            
+            return {
+                num1, num2, operation, answer,
+                display: `${num1} ${operation} ${num2} = ?`
+            };
+        }
+
+        function nextProblem() {
+            currentProblem = generateProblem();
+            document.getElementById('problem').textContent = currentProblem.display;
+            document.getElementById('answer').value = '';
+            document.getElementById('answer').focus();
+            document.getElementById('feedback').classList.add('hidden');
+        }
+
+        async function submitAnswer() {
+            const userAnswer = parseInt(document.getElementById('answer').value);
+            if (isNaN(userAnswer)) return;
+
+            const isCorrect = userAnswer === currentProblem.answer;
+            score.total++;
+            if (isCorrect) score.correct++;
+            
+            document.getElementById('studentScore').textContent = `Score: ${score.correct}/${score.total}`;
+            
+            // Create attempt object
+            const attemptData = {
+                studentId: currentUser.id,
+                problem: `${currentProblem.num1} ${currentProblem.operation} ${currentProblem.num2}`,
+                correctAnswer: currentProblem.answer,
+                studentAnswer: userAnswer,
+                isCorrect: isCorrect,
+                timestamp: new Date()
+            };
+            
+            // Update mastery display BEFORE writing to Firebase (no read)
+            updateMasteryAfterProblem(attemptData);
+            
+            // Write to Firebase asynchronously (no read, just write)
+            if (db && currentUser) {
+                db.collection('problemAttempts').add(attemptData).catch(err => {
+                    console.error('Error saving:', err);
+                });
+            }
+            
+            if (isCorrect) {
+                const feedbackEl = document.getElementById('feedback');
+                feedbackEl.className = 'feedback correct';
+                feedbackEl.textContent = 'Correct!';
+                feedbackEl.classList.remove('hidden');
+                setTimeout(nextProblem, 1000);
+            } else {
+                showVisualFeedback(currentProblem, userAnswer);
+            }
+        }
+
+        function showVisualFeedback(problem, userAnswer) {
+            const modal = document.getElementById('feedbackModal');
+            document.getElementById('visualSolution').innerHTML = `
+                <div style="font-size: 1.4em; margin: 20px 0;">
+                    ${problem.num1} ${problem.operation} ${problem.num2} = ?
+                </div>
+                <div style="color: #f44336; font-size: 1.2em; margin: 15px 0;">
+                    You answered: ${userAnswer}
+                </div>
+                <div style="color: #4caf50; font-size: 1.2em; margin: 15px 0;">
+                    Correct answer: ${problem.answer}
+                </div>
+            `;
+            modal.classList.remove('hidden');
+        }
+
+        function closeFeedbackModal() {
+            document.getElementById('feedbackModal').classList.add('hidden');
+            nextProblem();
+        }
+
+        // Teacher Functions
+        function showTeacherLogin() {
+            showScreen('teacherLoginScreen');
+            document.getElementById('teacherPassword').focus();
+        }
+
+        function teacherLogin() {
+            const password = document.getElementById('teacherPassword').value;
+            if (password === TEACHER_PASSWORD) {
+                document.getElementById('teacherPassword').value = '';
+                showTeacherDashboard();
+            } else {
+                alert('Incorrect password');
+                document.getElementById('teacherPassword').value = '';
+            }
+        }
+
+        function backToMainLogin() {
+            document.getElementById('teacherPassword').value = '';
+            showScreen('loginScreen');
+        }
+
+        function showTeacherDashboard() {
+            showScreen('teacherScreen');
+            updateStudentList();
+            
+            // Check if we have cached stats
+            const cachedStats = getCachedData('dashboardStats');
+            if (cachedStats) {
+                displayDashboardStats(cachedStats);
+                const age = Math.floor((Date.now() - JSON.parse(sessionStorage.getItem('dashboardStats')).timestamp) / 60000);
+                document.getElementById('cacheInfo').textContent = `Statistics loaded from cache (${age} minutes ago)`;
+            }
+        }
+
+        async function loadDashboardStats() {
+            const now = Date.now();
+            if (now - lastRefreshTime < REFRESH_COOLDOWN) {
+                const remaining = Math.ceil((REFRESH_COOLDOWN - (now - lastRefreshTime)) / 1000);
+                alert(`Please wait ${remaining} seconds before refreshing again`);
+                return;
+            }
+            
+            const btn = document.getElementById('loadStatsBtn');
+            btn.disabled = true;
+            btn.textContent = 'Loading...';
+            
+            try {
+                // Only query recent data
+                const oneDayAgo = new Date();
+                oneDayAgo.setDate(oneDayAgo.getDate() - 1);
+                
+                const snapshot = await db.collection('problemAttempts')
+                    .where('timestamp', '>', oneDayAgo)
+                    .limit(500)
+                    .get();
+                
+                const attempts = [];
+                snapshot.forEach(doc => attempts.push(doc.data()));
+                
+                const activeStudents = new Set(attempts.map(a => a.studentId)).size;
+                const stats = {
+                    totalStudents: students.length,
+                    activeToday: activeStudents,
+                    averageMastery: 'Click students for details'
+                };
+                
+                setCachedData('dashboardStats', stats);
+                displayDashboardStats(stats);
+                
+                lastRefreshTime = now;
+                document.getElementById('cacheInfo').textContent = 'Statistics updated just now';
+            } catch (error) {
+                console.error('Error loading stats:', error);
+                alert('Error loading statistics');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Refresh Statistics';
+            }
+        }
+
+        function displayDashboardStats(stats) {
+            document.getElementById('dashboardStats').classList.remove('hidden');
+            document.getElementById('totalStudents').textContent = stats.totalStudents;
+            document.getElementById('averageMastery').textContent = stats.averageMastery;
+            document.getElementById('activeToday').textContent = stats.activeToday;
+        }
+
+        function updateStudentList() {
+            const list = document.getElementById('studentList');
+            if (students.length === 0) {
+                list.innerHTML = '<p>No students found. Please add students first.</p>';
+                return;
+            }
+            
+            const sorted = [...students].sort((a, b) => a.name.localeCompare(b.name));
+            list.innerHTML = sorted.map(student => `
+                <div class="student-item" onclick="showStudentProgress('${student.id}')">
+                    <strong>${student.name}</strong><br>
+                    <span style="font-size: 0.9em; color: #666;">
+                        ID: ${student.id} • Grade: ${student.grade} • Class: ${student.class}
+                    </span>
+                </div>
+            `).join('');
+        }
+
+        async function showStudentProgress(studentId) {
+            const student = students.find(s => s.id === studentId);
+            if (!student) return;
+            
+            document.getElementById('progressTitle').textContent = `${student.name}'s Progress`;
+            document.getElementById('studentProgress').classList.remove('hidden');
+            
+            // Highlight selected student
+            document.querySelectorAll('.student-item').forEach(item => {
+                item.classList.remove('selected');
+            });
+            event.target.closest('.student-item').classList.add('selected');
+            
+            // Load summary (limit 20 for initial view)
+            try {
+                const snapshot = await db.collection('problemAttempts')
+                    .where('studentId', '==', studentId)
+                    .orderBy('timestamp', 'desc')
+                    .limit(20)
+                    .get();
+                
+                const attempts = [];
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    if (data.timestamp && data.timestamp.toDate) {
+                        data.timestamp = data.timestamp.toDate();
+                    }
+                    attempts.push(data);
+                });
+                
+                if (attempts.length === 0) {
+                    document.getElementById('summarySection').innerHTML = `
+                        <p style="color: #666; text-align: center; padding: 20px;">
+                            No practice data yet for this student.
+                        </p>
+                    `;
+                    return;
+                }
+                
+                const totalAttempts = attempts.length;
+                const correctAttempts = attempts.filter(a => a.isCorrect).length;
+                const masteryResults = calculateCategoryMastery(attempts);
+                
+                // Display summary
+                document.getElementById('summarySection').innerHTML = `
+                    <div class="grid">
+                        <div class="card">
+                            <h3>Mastery %</h3>
+                            <div class="number">${masteryResults.percentage}%</div>
+                        </div>
+                        <div class="card">
+                            <h3>Recent Attempts</h3>
+                            <div class="number">${totalAttempts}</div>
+                        </div>
+                        <div class="card">
+                            <h3>Correct</h3>
+                            <div class="number">${correctAttempts}</div>
+                        </div>
+                    </div>
+                    <div class="mastery-display">
+                        <h3>Mastery by Category</h3>
+                        <div class="mastery-grid">
+                            ${Object.keys(masteryResults.categoryDetails).map(key => {
+                                const details = masteryResults.categoryDetails[key];
+                                const status = details.mastered ? 'mastered' : (details.total > 0 ? 'progress' : 'none');
+                                const icon = details.mastered ? '✅' : (details.total > 0 ? '⏳' : '⭕');
+                                return `
+                                    <div class="mastery-box ${status}">
+                                        <div style="font-weight: bold;">${details.name}</div>
+                                        <div style="font-size: 1.2em; margin: 5px 0;">${icon} ${details.correct}/${details.total}</div>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                `;
+                
+                // Store for lazy loading
+                window.currentStudentId = studentId;
+                window.currentStudentAttempts = attempts;
+                
+            } catch (error) {
+                console.error('Error loading student progress:', error);
+                alert('Error loading student data');
+            }
+        }
+
+        async function toggleProblemHistory() {
+            const content = document.getElementById('problemHistoryContent');
+            const history = document.getElementById('problemHistory');
+            
+            if (content.classList.contains('open')) {
+                content.classList.remove('open');
+                return;
+            }
+            
+            // Load history on first expand (lazy load)
+            if (!history.innerHTML && window.currentStudentAttempts) {
+                const attempts = window.currentStudentAttempts;
+                
+                history.innerHTML = `
+                    <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+                        <thead>
+                            <tr style="background: #2196f3; color: white;">
+                                <th style="padding: 10px; text-align: left;">Problem</th>
+                                <th style="padding: 10px; text-align: left;">Answer</th>
+                                <th style="padding: 10px; text-align: left;">Result</th>
+                                <th style="padding: 10px; text-align: left;">Time</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${attempts.map(a => `
+                                <tr style="border-bottom: 1px solid #eee;">
+                                    <td style="padding: 10px;"><strong>${a.problem} = ?</strong></td>
+                                    <td style="padding: 10px; color: ${a.isCorrect ? '#4caf50' : '#f44336'};">
+                                        ${a.studentAnswer}
+                                    </td>
+                                    <td style="padding: 10px;">${a.isCorrect ? '✓ Correct' : '✗ Wrong'}</td>
+                                    <td style="padding: 10px; font-size: 0.9em; color: #666;">
+                                        ${new Date(a.timestamp).toLocaleString()}
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                    <p style="text-align: center; color: #666; margin-top: 15px; font-size: 0.9em;">
+                        Showing last 20 attempts
+                    </p>
+                `;
+            }
+            
+            content.classList.add('open');
+        }
+
+        function logout() {
+            currentUser = null;
+            currentProblem = null;
+            score = { correct: 0, total: 0 };
+            sessionMasteryData = null;
+            showScreen('loginScreen');
+        }
+
+        // Event Listeners
+        document.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                if (!document.getElementById('practiceScreen').classList.contains('hidden')) {
+                    submitAnswer();
+                } else if (!document.getElementById('loginScreen').classList.contains('hidden')) {
+                    studentLogin();
+                } else if (!document.getElementById('teacherLoginScreen').classList.contains('hidden')) {
+                    teacherLogin();
+                }
+            }
+        });
+
+        // Initialize
+        window.addEventListener('load', function() {
+            console.log('Math Facts Tracker - Optimized Version');
+            console.log('Read optimization: Caching + Lazy Loading + Limited Queries');
+            initFirebase();
+        });
+    </script>
+</body>
+</html>
