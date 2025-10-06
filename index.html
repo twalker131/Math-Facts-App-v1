@@ -1070,15 +1070,7 @@ async function submitAnswer() {
     }
 }
             
-            updateScore();
-            
-            if (isCorrect) {
-                showFeedback(true, currentProblem.answer);
-                setTimeout(nextProblem, 1000);
-            } else {
-                showVisualFeedback(currentProblem, userAnswer);
-            }
-        }
+
 
         function updateScore() {
             document.getElementById('studentScore').textContent = `Score: ${score.correct}/${score.total}`;
