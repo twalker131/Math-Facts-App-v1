@@ -1686,6 +1686,86 @@ async function uploadCSV() {
             });
         }
 
+async function updateDashboardStats() {
+    if (students.length === 0) {
+        document.getElementById('totalStudents').textContent = '0';
+        document.getElementById('averageMastery').textContent = '0%';
+        document.getElementById('activeToday').textContent = '0';
+        await updateClassMasteryOverview(null);
+        return;
+    }
+    
+    document.getElementById('totalStudents').textContent = students.length;
+    
+    if (!db) {
+        document.getElementById('averageMastery').textContent = 'N/A';
+        document.getElementById('activeToday').textContent = 'N/A';
+        await updateClassMasteryOverview(null);
+        return;
+    }
+    
+    try {
+        const masteryData = await getCachedMasteryData();
+        
+        // Calculate average mastery
+        let totalMastery = 0;
+        let studentsWithData = 0;
+        
+        for (const student of students) {
+            const studentData = masteryData[student.id];
+            if (studentData && studentData.totalAttempts > 0) {
+                const allAttempts = [];
+                Object.values(studentData.attemptsByCategory).forEach(attempts => {
+                    allAttempts.push(...attempts);
+                });
+                
+                if (allAttempts.length > 0) {
+                    const masteryResults = calculateCategoryMastery(allAttempts);
+                    totalMastery += parseFloat(masteryResults.percentage);
+                    studentsWithData++;
+                }
+            }
+        }
+        
+        const avgMastery = studentsWithData > 0 ? (totalMastery / studentsWithData).toFixed(1) : 0;
+        document.getElementById('averageMastery').textContent = avgMastery + '%';
+        
+        // Calculate active today
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        let activeCount = 0;
+        for (const student of students) {
+            const studentData = masteryData[student.id];
+            if (studentData && studentData.totalAttempts > 0) {
+                const allAttempts = [];
+                Object.values(studentData.attemptsByCategory).forEach(attempts => {
+                    allAttempts.push(...attempts);
+                });
+                
+                const hasActivityToday = allAttempts.some(attempt => {
+                    const attemptDate = new Date(attempt.timestamp);
+                    attemptDate.setHours(0, 0, 0, 0);
+                    return attemptDate.getTime() === today.getTime();
+                });
+                
+                if (hasActivityToday) activeCount++;
+            }
+        }
+        
+        document.getElementById('activeToday').textContent = activeCount;
+        
+        // Update class mastery overview
+        await updateClassMasteryOverview(masteryData);
+        
+    } catch (error) {
+        console.error('Error updating dashboard stats:', error);
+        document.getElementById('averageMastery').textContent = 'Error';
+        document.getElementById('activeToday').textContent = 'Error';
+    }
+}
+
+        
 async function updateClassMasteryOverview(masteryData = null) {
     const container = document.getElementById('classMasteryOverview');
     
