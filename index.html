@@ -729,7 +729,6 @@ let teacherDashboardListener = null; // Real-time listener
                 if (firebaseStudents.length > 0) {
                     students = firebaseStudents;
                     updateStudentList();
-                    updateDashboardStats();
                     populateFilterOptions();
                 } else {
                     console.log('No students found in Firebase collection');
