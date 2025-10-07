@@ -893,13 +893,13 @@ html += '<div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 
         currentUser = student;
         score = { correct: 0, total: 0 };
         
-        // Load all attempts once at login (last 40)
+        // Load all attempts once at login (last 70)
         if (db) {
             try {
                 const snapshot = await db.collection('problemAttempts')
                     .where('studentId', '==', studentId)
                     .orderBy('timestamp', 'desc')
-                    .limit(40)
+                    .limit(70)
                     .get();
                 
                 currentStudentAttempts = [];
@@ -1043,8 +1043,8 @@ async function submitAnswer() {
     
     // Add to local cache IMMEDIATELY (no waiting for Firebase)
     currentStudentAttempts.unshift(problemData); // Add to beginning
-    if (currentStudentAttempts.length > 40) {
-        currentStudentAttempts.pop(); // Keep only last 40
+    if (currentStudentAttempts.length > 70) {
+        currentStudentAttempts.pop(); // Keep only last 70
     }
     
     // Save to Firebase in background (don't wait for it)
