@@ -1963,19 +1963,22 @@ function filterByPatternAndMasteryFromCache(studentsToFilter, masteryData, patte
             if (patternAttempts.length === 0) {
                 includeStudent = false;
             } else if (masteryFilter) {
-                const correct = patternAttempts.filter(attempt => attempt.isCorrect).length;
-                const masteryRate = (correct / patternAttempts.length) * 100;
+                // For pattern filter, check if this specific category is mastered
+                const recentAttempts = patternAttempts.slice(0, 4); // Already sorted by timestamp desc
+                const correctCount = recentAttempts.filter(a => a.isCorrect).length;
+                const isMastered = recentAttempts.length >= 4 && correctCount === 4;
+                const categoryMastery = isMastered ? 100 : 0; // Category is either mastered (100%) or not (0%)
                 
-                if (!isInMasteryBucket(masteryRate, masteryFilter)) {
+                if (!isInMasteryBucket(categoryMastery, masteryFilter)) {
                     includeStudent = false;
                 }
             }
         } else if (masteryFilter) {
-            const masteryRate = studentData.totalAttempts > 0 
-                ? (studentData.correctAttempts / studentData.totalAttempts) * 100 
-                : 0;
+            // Calculate overall category-based mastery (same as dashboard)
+            const masteredCategories = calculateMasteredCategoriesCount(studentData.attemptsByCategory);
+            const overallMastery = (masteredCategories / 8) * 100;
             
-            if (!isInMasteryBucket(masteryRate, masteryFilter)) {
+            if (!isInMasteryBucket(overallMastery, masteryFilter)) {
                 includeStudent = false;
             }
         }
@@ -1986,6 +1989,26 @@ function filterByPatternAndMasteryFromCache(studentsToFilter, masteryData, patte
     }
     
     return filteredStudents;
+}
+
+function calculateMasteredCategoriesCount(attemptsByCategory) {
+    let masteredCount = 0;
+    
+    const categories = ['pos_plus_pos', 'pos_plus_neg', 'pos_minus_pos', 'pos_minus_neg',
+                       'neg_plus_pos', 'neg_plus_neg', 'neg_minus_pos', 'neg_minus_neg'];
+    
+    categories.forEach(category => {
+        const attempts = attemptsByCategory[category] || [];
+        const recentAttempts = attempts.slice(0, 4); // Already sorted by timestamp desc
+        const correctCount = recentAttempts.filter(a => a.isCorrect).length;
+        const isMastered = recentAttempts.length >= 4 && correctCount === 4;
+        
+        if (isMastered) {
+            masteredCount++;
+        }
+    });
+    
+    return masteredCount;
 }
 
 function isInMasteryBucket(masteryRate, bucket) {
@@ -2005,8 +2028,8 @@ function isInMasteryBucket(masteryRate, bucket) {
     
     return true;
 }
-        
 
+        
 
         function updateFilteredStudentList(filteredStudents) {
             const listEl = document.getElementById('studentList');
