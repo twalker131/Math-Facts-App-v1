@@ -266,6 +266,41 @@
             background: #bbdefb;
             border-color: #2196f3;
         }
+
+      .cache-popup-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+        .cache-popup {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            max-width: 500px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+        .cache-popup h2 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        .cache-popup p {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+        .cache-popup button {
+            margin: 0 10px;
+        }
+
+        
         .grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
@@ -505,7 +540,6 @@
             <div style="display: flex; justify-content: space-between; align-items: center;">
                 <h2>Teacher Dashboard</h2>
                 <div>
-                    <button class="btn-primary" onclick="refreshDashboard()" style="margin-right: 10px;">🔄 Refresh Data</button>
                     <button class="btn-secondary" onclick="logout()">Back to Login</button>
                 </div>
             </div>
@@ -643,8 +677,18 @@
                     <div id="recentProblems" class="recent-problems"></div>
                 </div>
             </div>
+
+<!-- Cache Check Popup -->
+            <div id="cachePopup" class="cache-popup-overlay hidden">
+                <div class="cache-popup">
+                    <h2>📊 No Student Data Found</h2>
+                    <p>There is no student data in your cache. Would you like to load the last 50 problems from each student?</p>
+                    <button class="btn-success" onclick="loadInitialData()">Yes, Load Data</button>
+                    <button class="btn-secondary" onclick="skipInitialLoad()">No, Start Empty</button>
+                </div>
+            </div>
         </div>
-    </div>
+
 
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
@@ -1285,9 +1329,8 @@ async function showTeacherDashboard() {
     updateStudentList();
     populateFilterOptions();
     
-    // Load data from cache or Firebase
-    await getCachedMasteryData();
-    await updateDashboardStats();
+    // Check cache and prompt if needed
+    await checkCacheAndPrompt();
     
     // Set up real-time listener for new problems
     setupTeacherDashboardListener();
@@ -2225,7 +2268,7 @@ async function loadMasteryDataForAllStudents() {
     try {
         const snapshot = await db.collection('problemAttempts')
             .orderBy('timestamp', 'desc')
-            .limit(4000)
+            .limit(50 * students.length)
             .get();
         
         console.log(`Loaded ${snapshot.size} total attempts in single query`);
@@ -2271,27 +2314,61 @@ async function loadMasteryDataForAllStudents() {
     }
 }
 
-async function getCachedMasteryData(forceRefresh = false) {
-    // Try localStorage first
-    if (!forceRefresh) {
-        const savedData = loadTeacherDataFromLocalStorage();
-        if (savedData && savedData.masteryData) {
-            teacherMasteryCache.data = savedData.masteryData;
-            teacherMasteryCache.lastFetch = savedData.timestamp;
-            return savedData.masteryData;
-        }
+async function getCachedMasteryData() {
+    // Check localStorage first
+    const savedData = loadTeacherDataFromLocalStorage();
+    if (savedData && savedData.masteryData) {
+        console.log('Using cached data from localStorage');
+        teacherMasteryCache.data = savedData.masteryData;
+        teacherMasteryCache.lastFetch = savedData.timestamp;
+        return savedData.masteryData;
     }
     
-    // If no localStorage or forced refresh, fetch from Firebase
-    console.log('Fetching fresh mastery data from Firebase...');
+    // No cache exists - return empty data structure
+    console.log('No cache found - returning empty data');
+    const emptyData = {};
+    students.forEach(student => {
+        emptyData[student.id] = {
+            attemptsByCategory: {
+                'pos_plus_pos': [], 'pos_plus_neg': [], 'pos_minus_pos': [], 'pos_minus_neg': [],
+                'neg_plus_pos': [], 'neg_plus_neg': [], 'neg_minus_pos': [], 'neg_minus_neg': []
+            },
+            totalAttempts: 0,
+            correctAttempts: 0,
+            allAttempts: []
+        };
+    });
+    return emptyData;
+}
+
+        async function loadInitialData() {
+    document.getElementById('cachePopup').classList.add('hidden');
+    
+    console.log('Loading initial student data...');
     const data = await loadMasteryDataForAllStudents();
     teacherMasteryCache.data = data;
     teacherMasteryCache.lastFetch = Date.now();
     
-    // Save to localStorage
     saveTeacherDataToLocalStorage(data);
+    await updateDashboardStats();
+}
+
+function skipInitialLoad() {
+    document.getElementById('cachePopup').classList.add('hidden');
+    console.log('Starting with empty dashboard');
+    // Dashboard will show with 0 data until students submit new problems
+}
+
+async function checkCacheAndPrompt() {
+    const savedData = loadTeacherDataFromLocalStorage();
     
-    return data;
+    if (!savedData || !savedData.masteryData) {
+        // No cache - show popup
+        document.getElementById('cachePopup').classList.remove('hidden');
+    } else {
+        // Cache exists - use it
+        await updateDashboardStats();
+    }
 }
 
 function setupTeacherDashboardListener() {
@@ -2345,24 +2422,7 @@ function setupTeacherDashboardListener() {
         });
 }
 
-async function refreshDashboard() {
-    const btn = event.target;
-    const originalText = btn.textContent;
-    btn.disabled = true;
-    btn.textContent = '⏳ Refreshing...';
-    
-    try {
-        await getCachedMasteryData(true); // Force refresh
-        await updateDashboardStats();
-        console.log('Dashboard refreshed successfully');
-    } catch (error) {
-        console.error('Error refreshing dashboard:', error);
-        alert('Error refreshing dashboard. Check console for details.');
-    }
-    
-    btn.disabled = false;
-    btn.textContent = originalText;
-}
+
       
         // Event Listeners
         document.addEventListener('keypress', function(e) {
