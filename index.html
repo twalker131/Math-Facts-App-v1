@@ -629,12 +629,14 @@
                     </div>
                     
                     <div class="filter-group">
-                        <label for="errorThreshold">Min Error Rate (%):</label>
-                        <select id="errorThreshold" onchange="applyFilters()">
-                            <option value="0">Any Error Rate</option>
-                            <option value="25">25%+ Errors</option>
-                            <option value="50">50%+ Errors</option>
-                            <option value="75">75%+ Errors</option>
+                        <label for="masteryFilter">Mastery Rate:</label>
+                        <select id="masteryFilter" onchange="applyFilters()">
+                            <option value="">All Mastery Levels</option>
+                            <option value="0-25">0% - 25%</option>
+                            <option value="25-50">25% - 50%</option>
+                            <option value="50-75">50% - 75%</option>
+                            <option value="75-99">75% - 99%</option>
+                            <option value="100">100%</option>
                         </select>
                     </div>
                 </div>
@@ -1917,7 +1919,7 @@ async function applyFilters() {
     const classFilter = document.getElementById('classFilter').value;
     const gradeFilter = document.getElementById('gradeFilter').value;
     const patternFilter = document.getElementById('patternFilter').value;
-    const errorThreshold = parseInt(document.getElementById('errorThreshold').value);
+    const masteryFilter = document.getElementById('masteryFilter').value;
     
     let filteredStudents = students;
     
@@ -1930,10 +1932,10 @@ async function applyFilters() {
         });
     }
     
-    // Apply pattern/error filters using cached data - no Firebase read!
-    if ((patternFilter || errorThreshold > 0) && db) {
+    // Apply pattern/mastery filters using cached data - no Firebase read!
+    if ((patternFilter || masteryFilter) && db) {
         const masteryData = await getCachedMasteryData();
-        filteredStudents = filterByPatternAndErrorsFromCache(filteredStudents, masteryData, patternFilter, errorThreshold);
+        filteredStudents = filterByPatternAndMasteryFromCache(filteredStudents, masteryData, patternFilter, masteryFilter);
     }
     
     updateFilteredStudentList(filteredStudents);
@@ -1942,14 +1944,15 @@ async function applyFilters() {
     document.getElementById('filterResults').textContent = resultsText;
 }
 
-function filterByPatternAndErrorsFromCache(studentsToFilter, masteryData, patternFilter, errorThreshold) {
+
+function filterByPatternAndMasteryFromCache(studentsToFilter, masteryData, patternFilter, masteryFilter) {
     const filteredStudents = [];
     
     for (const student of studentsToFilter) {
         const studentData = masteryData[student.id];
         
         if (!studentData || studentData.totalAttempts === 0) {
-            if (patternFilter || errorThreshold > 0) continue;
+            if (patternFilter || masteryFilter) continue;
         }
         
         let includeStudent = true;
@@ -1959,20 +1962,20 @@ function filterByPatternAndErrorsFromCache(studentsToFilter, masteryData, patter
             
             if (patternAttempts.length === 0) {
                 includeStudent = false;
-            } else if (errorThreshold > 0) {
-                const errors = patternAttempts.filter(attempt => !attempt.isCorrect).length;
-                const errorRate = (errors / patternAttempts.length) * 100;
+            } else if (masteryFilter) {
+                const correct = patternAttempts.filter(attempt => attempt.isCorrect).length;
+                const masteryRate = (correct / patternAttempts.length) * 100;
                 
-                if (errorRate < errorThreshold) {
+                if (!isInMasteryBucket(masteryRate, masteryFilter)) {
                     includeStudent = false;
                 }
             }
-        } else if (errorThreshold > 0) {
-            const errorRate = studentData.totalAttempts > 0 
-                ? ((studentData.totalAttempts - studentData.correctAttempts) / studentData.totalAttempts) * 100 
+        } else if (masteryFilter) {
+            const masteryRate = studentData.totalAttempts > 0 
+                ? (studentData.correctAttempts / studentData.totalAttempts) * 100 
                 : 0;
             
-            if (errorRate < errorThreshold) {
+            if (!isInMasteryBucket(masteryRate, masteryFilter)) {
                 includeStudent = false;
             }
         }
@@ -1984,6 +1987,25 @@ function filterByPatternAndErrorsFromCache(studentsToFilter, masteryData, patter
     
     return filteredStudents;
 }
+
+function isInMasteryBucket(masteryRate, bucket) {
+    if (!bucket) return true;
+    
+    if (bucket === '0-25') {
+        return masteryRate >= 0 && masteryRate < 25;
+    } else if (bucket === '25-50') {
+        return masteryRate >= 25 && masteryRate < 50;
+    } else if (bucket === '50-75') {
+        return masteryRate >= 50 && masteryRate < 75;
+    } else if (bucket === '75-99') {
+        return masteryRate >= 75 && masteryRate < 100;
+    } else if (bucket === '100') {
+        return masteryRate === 100;
+    }
+    
+    return true;
+}
+        
 
 
         function updateFilteredStudentList(filteredStudents) {
@@ -2011,7 +2033,7 @@ function filterByPatternAndErrorsFromCache(studentsToFilter, masteryData, patter
             document.getElementById('classFilter').value = '';
             document.getElementById('gradeFilter').value = '';
             document.getElementById('patternFilter').value = '';
-            document.getElementById('errorThreshold').value = '0';
+            document.getElementById('masteryFilter').value = '';
             
             updateStudentList();
             document.getElementById('filterResults').textContent = `Showing ${students.length} of ${students.length} students`;
