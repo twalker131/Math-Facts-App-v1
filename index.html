@@ -883,20 +883,31 @@ let miniProblemResults = [false, false];
         async function loadStudentsFromFirebase() {
             if (!db) return;
             
+            // Check cache first
+            const cachedStudents = loadStudentsListFromCache();
+            if (cachedStudents && cachedStudents.length > 0) {
+                console.log('✅ Using cached students list, NO Firebase read!');
+                students = cachedStudents;
+                updateStudentList();
+                populateFilterOptions();
+                return;
+            }
+            
+            // No cache - load from Firebase
             try {
-                console.log('Attempting to load students from Firebase...');
+                console.log('📥 No students cache found, loading from Firebase...');
                 const snapshot = await db.collection('students').get();
                 const firebaseStudents = [];
                 
                 snapshot.forEach(doc => {
-                    console.log('Found student document:', doc.id, doc.data());
                     firebaseStudents.push({ id: doc.id, ...doc.data() });
                 });
                 
-                console.log('Total students loaded from Firebase:', firebaseStudents.length);
+                console.log(`Loaded ${firebaseStudents.length} students from Firebase`);
                 
                 if (firebaseStudents.length > 0) {
                     students = firebaseStudents;
+                    saveStudentsListToCache(students); // Save to cache
                     updateStudentList();
                     populateFilterOptions();
                 } else {
@@ -1777,6 +1788,7 @@ async function showTeacherDashboard() {
                 }
                 
                 students.push(student);
+                saveStudentsListToCache(students); // Update cache
                 
                 document.getElementById('newStudentId').value = '';
                 document.getElementById('newStudentName').value = '';
@@ -1963,6 +1975,7 @@ async function uploadCSV() {
         
         // Add to local array
         students.push(...newStudents);
+        saveStudentsListToCache(students); // Update cache
         
         // Update UI
         updateStudentList();
@@ -2019,6 +2032,7 @@ async function uploadCSV() {
                 });
                 
                 if (addedCount > 0) {
+                    saveStudentsListToCache(students); // Update cache
                     updateStudentList();
                     updateDashboardStats();
                     populateFilterOptions();
@@ -2065,6 +2079,7 @@ async function uploadCSV() {
                 }
                 
                 students = [];
+                localStorage.removeItem('studentsList'); // Clear cache
                 updateStudentList();
                 updateDashboardStats();
                 populateFilterOptions();
@@ -2104,6 +2119,7 @@ async function uploadCSV() {
                 }
                 
                 students.splice(index, 1);
+                saveStudentsListToCache(students); // Update cache
                 updateStudentList();
                 updateDashboardStats();
                 populateFilterOptions();
@@ -2745,6 +2761,36 @@ function loadStudentAttemptsFromCache(studentId) {
         }
     } catch (error) {
         console.error('Error loading student attempts from cache:', error);
+    }
+    return null;
+}
+
+// Students list cache functions
+function saveStudentsListToCache(studentsList) {
+    try {
+        const dataToSave = {
+            students: studentsList,
+            timestamp: Date.now()
+        };
+        localStorage.setItem('studentsList', JSON.stringify(dataToSave));
+        console.log(`💾 Saved ${studentsList.length} students to cache`);
+    } catch (error) {
+        console.error('Error saving students list to cache:', error);
+    }
+}
+
+function loadStudentsListFromCache() {
+    try {
+        const savedData = localStorage.getItem('studentsList');
+        if (savedData) {
+            const parsed = JSON.parse(savedData);
+            const ageInMs = Date.now() - parsed.timestamp;
+            const ageInHours = ageInMs / (1000 * 60 * 60);
+            console.log(`📦 Found students list in cache (${ageInHours.toFixed(1)} hours old)`);
+            return parsed.students;
+        }
+    } catch (error) {
+        console.error('Error loading students list from cache:', error);
     }
     return null;
 }
