@@ -939,30 +939,81 @@ html += '<div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 
         currentUser = student;
         score = { correct: 0, total: 0 };
         
-        // Load all attempts once at login (last 70)
-        if (db) {
-            try {
-                const snapshot = await db.collection('problemAttempts')
-                    .where('studentId', '==', studentId)
-                    .orderBy('timestamp', 'desc')
-                    .limit(70)
-                    .get();
-                
-                currentStudentAttempts = [];
-                snapshot.forEach(doc => {
-                    const data = doc.data();
-                    if (data.timestamp && data.timestamp.toDate) {
-                        data.timestamp = data.timestamp.toDate();
-                    }
-                    currentStudentAttempts.push(data);
-                });
-                console.log('Loaded', currentStudentAttempts.length, 'previous attempts');
-            } catch (error) {
-                console.error('Error loading student attempts:', error);
-                currentStudentAttempts = [];
+        // Try to load from cache first
+        let cachedAttempts = loadStudentAttemptsFromCache(studentId);
+        
+        if (cachedAttempts && cachedAttempts.length >= 70) {
+            // Cache has 70 problems - use cache only, no Firebase read!
+            console.log('✅ Using full cache (70 attempts), NO Firebase read needed');
+            currentStudentAttempts = cachedAttempts;
+        } else if (cachedAttempts && cachedAttempts.length > 0) {
+            // Cache exists but has fewer than 70 - fetch only the remaining
+            const cacheCount = cachedAttempts.length;
+            const neededCount = 70 - cacheCount;
+            
+            console.log(`📦 Cache has ${cacheCount} attempts, fetching ${neededCount} more from Firebase...`);
+            
+            if (db) {
+                try {
+                    const snapshot = await db.collection('problemAttempts')
+                        .where('studentId', '==', studentId)
+                        .orderBy('timestamp', 'desc')
+                        .limit(70)
+                        .get();
+                    
+                    const allAttempts = [];
+                    snapshot.forEach(doc => {
+                        const data = doc.data();
+                        if (data.timestamp && data.timestamp.toDate) {
+                            data.timestamp = data.timestamp.toDate();
+                        }
+                        allAttempts.push(data);
+                    });
+                    
+                    console.log(`Fetched ${allAttempts.length} total attempts from Firebase`);
+                    currentStudentAttempts = allAttempts;
+                    
+                    // Update cache with fresh data
+                    saveStudentAttemptsToCache(studentId, allAttempts);
+                } catch (error) {
+                    console.error('Error loading student attempts:', error);
+                    // Fall back to cached data if Firebase fails
+                    currentStudentAttempts = cachedAttempts;
+                }
+            } else {
+                currentStudentAttempts = cachedAttempts;
             }
         } else {
-            currentStudentAttempts = [];
+            // No cache - load from Firebase (first time login on this device)
+            console.log('📥 No cache found, loading from Firebase...');
+            
+            if (db) {
+                try {
+                    const snapshot = await db.collection('problemAttempts')
+                        .where('studentId', '==', studentId)
+                        .orderBy('timestamp', 'desc')
+                        .limit(70)
+                        .get();
+                    
+                    currentStudentAttempts = [];
+                    snapshot.forEach(doc => {
+                        const data = doc.data();
+                        if (data.timestamp && data.timestamp.toDate) {
+                            data.timestamp = data.timestamp.toDate();
+                        }
+                        currentStudentAttempts.push(data);
+                    });
+                    console.log(`Loaded ${currentStudentAttempts.length} attempts from Firebase`);
+                    
+                    // Save to cache for next time
+                    saveStudentAttemptsToCache(studentId, currentStudentAttempts);
+                } catch (error) {
+                    console.error('Error loading student attempts:', error);
+                    currentStudentAttempts = [];
+                }
+            } else {
+                currentStudentAttempts = [];
+            }
         }
         
         showScreen('practiceScreen');
@@ -1092,6 +1143,9 @@ async function submitAnswer() {
     if (currentStudentAttempts.length > 70) {
         currentStudentAttempts.pop(); // Keep only last 70
     }
+    
+    // Save updated cache to localStorage
+    saveStudentAttemptsToCache(currentUser.id, currentStudentAttempts);
     
     // Save to Firebase in background (don't wait for it)
     if (db && currentUser) {
@@ -2301,6 +2355,40 @@ function loadTeacherDataFromLocalStorage() {
         }
     } catch (error) {
         console.error('Error loading from localStorage:', error);
+    }
+    return null;
+}
+
+// Student-specific cache functions
+function saveStudentAttemptsToCache(studentId, attempts) {
+    try {
+        const cacheKey = `studentAttempts_${studentId}`;
+        const dataToSave = {
+            studentId: studentId,
+            attempts: attempts.slice(0, 70), // Keep only last 70
+            timestamp: Date.now()
+        };
+        localStorage.setItem(cacheKey, JSON.stringify(dataToSave));
+        console.log(`Saved ${attempts.length} attempts to cache for student ${studentId}`);
+    } catch (error) {
+        console.error('Error saving student attempts to cache:', error);
+    }
+}
+
+function loadStudentAttemptsFromCache(studentId) {
+    try {
+        const cacheKey = `studentAttempts_${studentId}`;
+        const savedData = localStorage.getItem(cacheKey);
+        if (savedData) {
+            const parsed = JSON.parse(savedData);
+            // Verify the cache is for the correct student
+            if (parsed.studentId === studentId && parsed.attempts) {
+                console.log(`Loaded ${parsed.attempts.length} attempts from cache for student ${studentId}`);
+                return parsed.attempts;
+            }
+        }
+    } catch (error) {
+        console.error('Error loading student attempts from cache:', error);
     }
     return null;
 }
