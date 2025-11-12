@@ -197,53 +197,172 @@
             color: #333;
         }
         
-        .visual-blocks {
+        
+        /* Interactive Modal Styles */
+        .interaction-section {
+            margin: 30px 0;
+            padding: 20px;
+            background: #fff3e0;
+            border-radius: 10px;
+            border: 2px solid #ff9800;
+        }
+        
+        .direction-buttons {
             display: flex;
             justify-content: center;
-            align-items: center;
+            gap: 20px;
             margin: 20px 0;
-            flex-wrap: wrap;
-            gap: 10px;
         }
         
-        .block-group {
-            text-align: center;
+        .direction-btn {
+            padding: 20px 40px;
+            font-size: 1.5em;
+            border: 3px solid #ddd;
+            border-radius: 10px;
+            cursor: pointer;
+            background: white;
+            font-weight: bold;
+            transition: all 0.3s;
         }
         
-        .block-label {
-            font-size: 0.9em;
-            color: #666;
-            margin-bottom: 5px;
+        .direction-btn:hover {
+            transform: scale(1.05);
+            border-color: #2196f3;
         }
         
-        .blocks {
-            display: inline-flex;
-            flex-wrap: wrap;
-            max-width: 150px;
-            gap: 2px;
-        }
-        
-        .block {
-            width: 12px;
-            height: 12px;
-            border: 1px solid #333;
-            margin: 1px;
-        }
-        
-        .block.positive {
+        .direction-btn.correct {
             background: #4caf50;
+            color: white;
+            border-color: #2e7d32;
         }
         
-        .block.negative {
+        .direction-btn.incorrect {
             background: #f44336;
+            color: white;
+            border-color: #c62828;
         }
         
-        .operation-symbol {
-            font-size: 2em;
-            margin: 0 15px;
-            color: #333;
+        .steps-input {
+            margin: 20px 0;
+        }
+        
+        .steps-input input {
+            padding: 15px;
+            font-size: 1.5em;
+            width: 100px;
+            text-align: center;
+            border: 3px solid #2196f3;
+            border-radius: 8px;
+            margin: 0 10px;
+        }
+        
+        .steps-input button {
+            padding: 15px 30px;
+            font-size: 1.2em;
+            background: #2196f3;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
             font-weight: bold;
         }
+        
+        .feedback-message {
+            margin: 15px 0;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+        
+        .feedback-message.correct {
+            background: #e8f5e8;
+            color: #2e7d32;
+            border: 2px solid #4caf50;
+        }
+        
+        .feedback-message.incorrect {
+            background: #ffebee;
+            color: #c62828;
+            border: 2px solid #f44336;
+        }
+        
+        .mini-practice {
+            margin: 30px 0;
+            padding: 25px;
+            background: #e3f2fd;
+            border-radius: 10px;
+            border: 3px solid #2196f3;
+        }
+        
+        .mini-practice h3 {
+            margin-top: 0;
+            color: #1976d2;
+            font-size: 1.5em;
+        }
+        
+        .mini-problem {
+            margin: 20px 0;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            border: 2px solid #90caf9;
+        }
+        
+        .mini-problem .problem {
+            font-size: 2em;
+            font-weight: bold;
+            margin: 15px 0;
+            color: #333;
+        }
+        
+        .mini-problem input {
+            padding: 12px;
+            font-size: 1.5em;
+            width: 120px;
+            text-align: center;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            margin: 10px;
+        }
+        
+        .mini-problem button {
+            padding: 12px 25px;
+            font-size: 1.1em;
+            background: #4caf50;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        
+        .mini-problem.completed {
+            opacity: 0.6;
+            border-color: #4caf50;
+            background: #e8f5e8;
+        }
+        
+        .progress-indicator {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin: 15px 0;
+        }
+        
+        .progress-dot {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #ddd;
+            border: 2px solid #999;
+        }
+        
+        .progress-dot.completed {
+            background: #4caf50;
+            border-color: #2e7d32;
+        }
+        
         
         .student-list {
             text-align: left;
@@ -527,11 +646,7 @@
         <div id="feedbackModal" class="feedback-modal hidden">
             <div class="feedback-content">
                 <div class="feedback-title">Let's work through this together!</div>
-                <div class="visual-explanation">
-                    <div id="visualProblem" class="math-step"></div>
-                    <div id="visualSolution"></div>
-                </div>
-                <button class="btn-success" onclick="closeFeedbackModal()">OK, I understand!</button>
+                <div id="modalContent"></div>
             </div>
         </div>
         
@@ -709,6 +824,13 @@ let teacherMasteryCache = {
     lastFetch: null
 };
 let teacherDashboardListener = null; // Real-time listener
+
+// Interactive Modal State
+let modalState = 'direction'; // direction, steps, solution, practice
+let directionAnswer = null;
+let stepsAnswer = null;
+let miniProblems = [];
+let miniProblemResults = [false, false];
         
         // Firebase Configuration
         const firebaseConfig = {
@@ -1187,166 +1309,400 @@ async function submitAnswer() {
             document.getElementById('feedback').classList.add('hidden');
         }
 
-        // Visual Feedback Functions
+        // Interactive Visual Feedback Functions
         function showVisualFeedback(problem, userAnswer) {
-            const modal = document.getElementById('feedbackModal');
-            const visualProblem = document.getElementById('visualProblem');
-            const visualSolution = document.getElementById('visualSolution');
+            modalState = 'direction';
+            directionAnswer = null;
+            stepsAnswer = null;
             
-            visualProblem.textContent = `${problem.num1} ${problem.operation} ${problem.num2} = ?`;
-            
-            let solutionHTML = '';
-            if (problem.operation === '+') {
-                solutionHTML = createAdditionVisual(problem.num1, problem.num2, problem.answer);
-            } else {
-                solutionHTML = createSubtractionVisual(problem.num1, problem.num2, problem.answer);
-            }
-            
-            solutionHTML += `
-                <div class="math-step" style="color: #f44336; margin-top: 20px;">
-                    You answered: ${userAnswer}
-                </div>
-                <div class="math-step" style="color: #4caf50;">
-                    Correct answer: ${problem.answer}
-                </div>
-            `;
-            
-            visualSolution.innerHTML = solutionHTML;
-            modal.classList.remove('hidden');
+            document.getElementById('feedbackModal').classList.remove('hidden');
+            renderDirectionQuestion();
         }
 
-        function createAdditionVisual(num1, num2, answer) {
-            let html = '<div class="math-step">Let\'s add these numbers step by step:</div>';
-            html += '<div class="visual-blocks">';
+        function createNumberLineVisual(num1, operation, num2, answer, showArrow = true) {
+            const allNumbers = [num1, num2, answer, 0];
+            const min = Math.min(...allNumbers) - 2;
+            const max = Math.max(...allNumbers) + 2;
             
-            html += '<div class="block-group">';
-            html += '<div class="block-label">Starting with:</div>';
-            html += '<div class="blocks">';
-            for (let i = 0; i < Math.abs(num1); i++) {
-                html += `<div class="block ${num1 >= 0 ? 'positive' : 'negative'}"></div>`;
-            }
-            html += '</div>';
-            html += `<div style="margin-top: 5px;">${num1}</div>`;
-            html += '</div>';
+            let html = '<div style="margin: 30px 0;">';
             
-            html += '<div class="operation-symbol">+</div>';
-            
-            html += '<div class="block-group">';
-            html += '<div class="block-label">Adding:</div>';
-            html += '<div class="blocks">';
-            for (let i = 0; i < Math.abs(num2); i++) {
-                html += `<div class="block ${num2 >= 0 ? 'positive' : 'negative'}"></div>`;
-            }
-            html += '</div>';
-            html += `<div style="margin-top: 5px;">${num2}</div>`;
-            html += '</div>';
-            
-            html += '<div class="operation-symbol">=</div>';
-            
-            html += '<div class="block-group">';
-            html += '<div class="block-label">Result:</div>';
-            if (answer === 0) {
-                html += '<div style="margin-top: 5px;">0</div>';
-            } else {
-                html += '<div class="blocks">';
-                for (let i = 0; i < Math.abs(answer); i++) {
-                    html += `<div class="block ${answer >= 0 ? 'positive' : 'negative'}"></div>`;
-                }
-                html += '</div>';
-                html += `<div style="margin-top: 5px;">${answer}</div>`;
-            }
-            html += '</div>';
-            html += '</div>';
-            
-            html += `<div class="math-step" style="color: #2196f3; margin-top: 20px;">
-                ${num1} + ${num2} = ${answer}
+            // Show the original problem
+            html += `<div class="math-step" style="margin-bottom: 20px;">
+                Problem: ${num1} ${operation} ${num2} = ?
             </div>`;
             
+            // Convert subtraction if needed
+            const originalOp = operation;
+            const originalNum2 = num2;
+            let displayNum2 = num2;
+            
+            if (operation === '-') {
+                const opposite = -num2;
+                html += `<div class="math-step" style="margin-bottom: 20px; color: #f57c00; font-size: 1.2em;">
+                    Remember: Subtracting is the same as adding the opposite!<br>
+                    ${num1} - (${num2}) = ${num1} + (${opposite})
+                </div>`;
+                
+                operation = '+';
+                displayNum2 = opposite;
+            }
+            
+            // Number line
+            html += '<div style="position: relative; margin: 40px 20px; height: 120px;">';
+            html += '<svg width="100%" height="120" style="overflow: visible;">';
+            
+            const range = max - min;
+            
+            // Main line
+            html += `<line x1="0%" y1="60" x2="100%" y2="60" stroke="#333" stroke-width="3"/>`;
+            
+            // Tick marks and numbers
+            for (let i = min; i <= max; i++) {
+                const xPos = ((i - min) / range) * 100;
+                html += `<line x1="${xPos}%" y1="55" x2="${xPos}%" y2="65" stroke="#333" stroke-width="2"/>`;
+                
+                const isBold = (i === num1 || i === answer || i === 0);
+                html += `<text x="${xPos}%" y="85" text-anchor="middle" 
+                    font-size="${isBold ? '16' : '14'}" 
+                    font-weight="${isBold ? 'bold' : 'normal'}"
+                    fill="${isBold ? '#2196f3' : '#666'}">
+                    ${i}
+                </text>`;
+            }
+            
+            // Starting point
+            const startPos = ((num1 - min) / range) * 100;
+            html += `<circle cx="${startPos}%" cy="60" r="6" fill="#4caf50" stroke="#2e7d32" stroke-width="2"/>`;
+            html += `<text x="${startPos}%" y="25" text-anchor="middle" font-size="14" font-weight="bold" fill="#2e7d32">
+                START
+            </text>`;
+            
+            // Arrow (if showing)
+            if (showArrow) {
+                const endPos = ((answer - min) / range) * 100;
+                const arrowColor = displayNum2 >= 0 ? '#2196f3' : '#f44336';
+                
+                if (displayNum2 !== 0) {
+                    html += `<defs>
+                        <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                            <polygon points="0 0, 10 3, 0 6" fill="${arrowColor}" />
+                        </marker>
+                    </defs>`;
+                    
+                    html += `<line x1="${startPos}%" y1="35" x2="${endPos}%" y2="35" 
+                        stroke="${arrowColor}" stroke-width="4" marker-end="url(#arrowhead)"/>`;
+                    
+                    const arrowMidPos = (startPos + endPos) / 2;
+                    html += `<text x="${arrowMidPos}%" y="20" text-anchor="middle" font-size="14" font-weight="bold" fill="${arrowColor}">
+                        ${displayNum2 > 0 ? '+' : ''}${displayNum2}
+                    </text>`;
+                }
+                
+                // Ending point
+                html += `<circle cx="${endPos}%" cy="60" r="6" fill="#ff9800" stroke="#f57c00" stroke-width="2"/>`;
+                html += `<text x="${endPos}%" y="105" text-anchor="middle" font-size="14" font-weight="bold" fill="#f57c00">
+                    ANSWER
+                </text>`;
+                
+                // Explanation
+                html += '</svg></div>';
+                
+                html += `<div class="math-step" style="margin-top: 30px; font-size: 1.3em;">
+                    Start at <strong style="color: #2e7d32;">${num1}</strong>, 
+                    ${displayNum2 >= 0 ? 'move RIGHT' : 'move LEFT'} 
+                    <strong style="color: ${arrowColor};">${Math.abs(displayNum2)} ${Math.abs(displayNum2) === 1 ? 'space' : 'spaces'}</strong>, 
+                    land on <strong style="color: #f57c00;">${answer}</strong>
+                </div>`;
+                
+                html += `<div class="math-step" style="margin-top: 20px; font-size: 1.5em; color: #4caf50;">
+                    ${num1} ${originalOp} (${originalNum2}) = <strong>${answer}</strong>
+                </div>`;
+            } else {
+                html += '</svg></div>';
+            }
+            
+            html += '</div>';
+            return html;
+        }
+        
+        function createMiniNumberLine(num1, num2, answer) {
+            const allNumbers = [num1, num2, answer, 0];
+            const min = Math.min(...allNumbers) - 2;
+            const max = Math.max(...allNumbers) + 2;
+            
+            let html = '<div style="position: relative; margin: 20px 10px; height: 80px;">';
+            html += '<svg width="100%" height="80" style="overflow: visible;">';
+            
+            const range = max - min;
+            
+            // Main line
+            html += `<line x1="0%" y1="40" x2="100%" y2="40" stroke="#333" stroke-width="2"/>`;
+            
+            // Tick marks and numbers
+            for (let i = min; i <= max; i++) {
+                const xPos = ((i - min) / range) * 100;
+                html += `<line x1="${xPos}%" y1="36" x2="${xPos}%" y2="44" stroke="#333" stroke-width="2"/>`;
+                
+                const isBold = (i === num1 || i === 0);
+                html += `<text x="${xPos}%" y="60" text-anchor="middle" 
+                    font-size="${isBold ? '14' : '12'}" 
+                    font-weight="${isBold ? 'bold' : 'normal'}"
+                    fill="${isBold ? '#2196f3' : '#666'}">
+                    ${i}
+                </text>`;
+            }
+            
+            // Starting point only
+            const startPos = ((num1 - min) / range) * 100;
+            html += `<circle cx="${startPos}%" cy="40" r="5" fill="#4caf50" stroke="#2e7d32" stroke-width="2"/>`;
+            html += `<text x="${startPos}%" y="20" text-anchor="middle" font-size="12" font-weight="bold" fill="#2e7d32">
+                START
+            </text>`;
+            
+            html += '</svg>';
+            html += '</div>';
+            
             return html;
         }
 
-        function createSubtractionVisual(num1, num2, answer) {
-            let html = '<div class="math-step">Let\'s work through this subtraction step by step:</div>';
+        function categorizeProblemForMini(num1, operation, num2) {
+            const num1Positive = num1 >= 0;
+            const num2Positive = num2 >= 0;
             
-            html += '<div class="math-step" style="color: #ff9800;">Subtracting is the same as adding the opposite!</div>';
-            
-            html += '<div class="visual-blocks">';
-            
-            html += '<div class="block-group">';
-            html += '<div class="block-label">Starting with:</div>';
-            html += '<div class="blocks">';
-            for (let i = 0; i < Math.abs(num1); i++) {
-                html += `<div class="block ${num1 >= 0 ? 'positive' : 'negative'}"></div>`;
-            }
-            html += '</div>';
-            html += `<div style="margin-top: 5px;">${num1}</div>`;
-            html += '</div>';
-            
-            html += '<div class="operation-symbol">-</div>';
-            
-            html += '<div class="block-group">';
-            html += '<div class="block-label">Subtracting:</div>';
-            html += '<div class="blocks">';
-            for (let i = 0; i < Math.abs(num2); i++) {
-                html += `<div class="block ${num2 >= 0 ? 'positive' : 'negative'}"></div>`;
-            }
-            html += '</div>';
-            html += `<div style="margin-top: 5px;">${num2}</div>`;
-            html += '</div>';
-            html += '</div>';
-            
-            html += '<div class="math-step" style="color: #2196f3; margin: 20px 0;">↓ This becomes ↓</div>';
-            html += `<div class="math-step">Subtracting ${num2} = Adding ${-num2}</div>`;
-            
-            html += '<div class="visual-blocks">';
-            
-            html += '<div class="block-group">';
-            html += '<div class="block-label">Starting with:</div>';
-            html += '<div class="blocks">';
-            for (let i = 0; i < Math.abs(num1); i++) {
-                html += `<div class="block ${num1 >= 0 ? 'positive' : 'negative'}"></div>`;
-            }
-            html += '</div>';
-            html += `<div style="margin-top: 5px;">${num1}</div>`;
-            html += '</div>';
-            
-            html += '<div class="operation-symbol">+</div>';
-            
-            html += '<div class="block-group">';
-            html += '<div class="block-label">Adding opposite:</div>';
-            html += '<div class="blocks">';
-            for (let i = 0; i < Math.abs(num2); i++) {
-                html += `<div class="block ${num2 >= 0 ? 'negative' : 'positive'}"></div>`;
-            }
-            html += '</div>';
-            html += `<div style="margin-top: 5px;">${num2 >= 0 ? '-' + num2 : '+' + Math.abs(num2)}</div>`;
-            html += '</div>';
-            
-            html += '<div class="operation-symbol">=</div>';
-            
-            html += '<div class="block-group">';
-            html += '<div class="block-label">Result:</div>';
-            if (answer === 0) {
-                html += '<div style="margin-top: 5px;">0</div>';
+            if (operation === '+') {
+                if (num1Positive && num2Positive) return 'pos_plus_pos';
+                if (num1Positive && !num2Positive) return 'pos_plus_neg';
+                if (!num1Positive && num2Positive) return 'neg_plus_pos';
+                if (!num1Positive && !num2Positive) return 'neg_plus_neg';
             } else {
-                html += '<div class="blocks">';
-                for (let i = 0; i < Math.abs(answer); i++) {
-                    html += `<div class="block ${answer >= 0 ? 'positive' : 'negative'}"></div>`;
-                }
-                html += '</div>';
-                html += `<div style="margin-top: 5px;">${answer}</div>`;
+                if (num1Positive && num2Positive) return 'pos_minus_pos';
+                if (num1Positive && !num2Positive) return 'pos_minus_neg';
+                if (!num1Positive && num2Positive) return 'neg_minus_pos';
+                if (!num1Positive && !num2Positive) return 'neg_minus_neg';
             }
-            html += '</div>';
+        }
+        
+        function generateSimilarProblem(category) {
+            let num1, num2, operation;
             
-            html += '</div>';
+            if (category === 'pos_plus_pos') {
+                num1 = Math.floor(Math.random() * 10) + 1;
+                num2 = Math.floor(Math.random() * 10) + 1;
+                operation = '+';
+            } else if (category === 'pos_plus_neg') {
+                num1 = Math.floor(Math.random() * 10) + 1;
+                num2 = -(Math.floor(Math.random() * 10) + 1);
+                operation = '+';
+            } else if (category === 'pos_minus_pos') {
+                num1 = Math.floor(Math.random() * 10) + 1;
+                num2 = Math.floor(Math.random() * 10) + 1;
+                operation = '-';
+            } else if (category === 'pos_minus_neg') {
+                num1 = Math.floor(Math.random() * 10) + 1;
+                num2 = -(Math.floor(Math.random() * 10) + 1);
+                operation = '-';
+            } else if (category === 'neg_plus_pos') {
+                num1 = -(Math.floor(Math.random() * 10) + 1);
+                num2 = Math.floor(Math.random() * 10) + 1;
+                operation = '+';
+            } else if (category === 'neg_plus_neg') {
+                num1 = -(Math.floor(Math.random() * 10) + 1);
+                num2 = -(Math.floor(Math.random() * 10) + 1);
+                operation = '+';
+            } else if (category === 'neg_minus_pos') {
+                num1 = -(Math.floor(Math.random() * 10) + 1);
+                num2 = Math.floor(Math.random() * 10) + 1;
+                operation = '-';
+            } else if (category === 'neg_minus_neg') {
+                num1 = -(Math.floor(Math.random() * 10) + 1);
+                num2 = -(Math.floor(Math.random() * 10) + 1);
+                operation = '-';
+            }
             
-            html += `
-                <div class="math-step" style="color: #4caf50; margin-top: 20px;">
-                    Remember: ${num1} - ${num2} = ${num1} + (${-num2}) = ${answer}
+            const answer = operation === '+' ? num1 + num2 : num1 - num2;
+            return { num1, num2, operation, answer };
+        }
+        
+        function renderDirectionQuestion() {
+            const { num1, operation, num2, answer } = currentProblem;
+            
+            let html = createNumberLineVisual(num1, operation, num2, answer, false);
+            
+            html += `<div class="interaction-section">
+                <div class="math-step" style="font-size: 1.3em; margin-bottom: 15px;">
+                    🤔 Which direction should we move?
                 </div>
-            `;
+                <div class="direction-buttons">
+                    <button class="direction-btn" onclick="checkDirection('left')">
+                        ⬅️ LEFT
+                    </button>
+                    <button class="direction-btn" onclick="checkDirection('right')">
+                        ➡️ RIGHT
+                    </button>
+                </div>
+                <div id="directionFeedback"></div>
+            </div>`;
             
-            return html;
+            document.getElementById('modalContent').innerHTML = html;
+        }
+        
+        function checkDirection(direction) {
+            const { num1, operation, num2 } = currentProblem;
+            let movementNum = operation === '-' ? -num2 : num2;
+            const correctDirection = movementNum >= 0 ? 'right' : 'left';
+            
+            const isCorrect = direction === correctDirection;
+            directionAnswer = isCorrect;
+            
+            const buttons = document.querySelectorAll('.direction-btn');
+            buttons.forEach(btn => {
+                btn.disabled = true;
+                if (btn.textContent.toLowerCase().includes(direction)) {
+                    btn.classList.add(isCorrect ? 'correct' : 'incorrect');
+                }
+            });
+            
+            const feedback = document.getElementById('directionFeedback');
+            if (isCorrect) {
+                feedback.innerHTML = `<div class="feedback-message correct">✅ Correct! We move ${correctDirection.toUpperCase()}!</div>`;
+                setTimeout(() => {
+                    modalState = 'steps';
+                    renderStepsQuestion();
+                }, 1500);
+            } else {
+                feedback.innerHTML = `<div class="feedback-message incorrect">❌ Not quite. We actually move ${correctDirection.toUpperCase()}.</div>`;
+                setTimeout(() => {
+                    modalState = 'steps';
+                    renderStepsQuestion();
+                }, 2000);
+            }
+        }
+        
+        function renderStepsQuestion() {
+            const { num1, operation, num2, answer } = currentProblem;
+            
+            let html = createNumberLineVisual(num1, operation, num2, answer, false);
+            
+            html += `<div class="interaction-section">
+                <div class="math-step" style="font-size: 1.3em; margin-bottom: 15px;">
+                    📏 How many spaces do we move?
+                </div>
+                <div class="steps-input">
+                    <input type="number" id="stepsInput" min="0" max="20" placeholder="?">
+                    <button onclick="checkSteps()">Submit</button>
+                </div>
+                <div id="stepsFeedback"></div>
+            </div>`;
+            
+            document.getElementById('modalContent').innerHTML = html;
+            setTimeout(() => document.getElementById('stepsInput').focus(), 100);
+        }
+        
+        function checkSteps() {
+            const { num1, operation, num2 } = currentProblem;
+            let movementNum = operation === '-' ? -num2 : num2;
+            const correctSteps = Math.abs(movementNum);
+            const userSteps = parseInt(document.getElementById('stepsInput').value);
+            
+            const isCorrect = userSteps === correctSteps;
+            stepsAnswer = isCorrect;
+            
+            const feedback = document.getElementById('stepsFeedback');
+            document.getElementById('stepsInput').disabled = true;
+            
+            if (isCorrect) {
+                feedback.innerHTML = `<div class="feedback-message correct">✅ Perfect! We move ${correctSteps} ${correctSteps === 1 ? 'space' : 'spaces'}!</div>`;
+                setTimeout(() => {
+                    modalState = 'solution';
+                    renderSolution();
+                }, 1500);
+            } else {
+                feedback.innerHTML = `<div class="feedback-message incorrect">❌ Not quite. We move ${correctSteps} ${correctSteps === 1 ? 'space' : 'spaces'}.</div>`;
+                setTimeout(() => {
+                    modalState = 'solution';
+                    renderSolution();
+                }, 2000);
+            }
+        }
+        
+        function renderSolution() {
+            const { num1, operation, num2, answer } = currentProblem;
+            
+            let html = '<div class="visual-explanation">';
+            html += '<div class="math-step" style="font-size: 1.5em; color: #2196f3; margin-bottom: 20px;">📚 Here\'s the complete solution:</div>';
+            html += createNumberLineVisual(num1, operation, num2, answer, true);
+            html += '</div>';
+            html += `<button class="btn-success" onclick="startMiniPractice()">Continue to Practice Problems</button>`;
+            
+            document.getElementById('modalContent').innerHTML = html;
+        }
+        
+        function startMiniPractice() {
+            const category = categorizeProblemForMini(currentProblem.num1, currentProblem.operation, currentProblem.num2);
+            miniProblems = [
+                generateSimilarProblem(category),
+                generateSimilarProblem(category)
+            ];
+            miniProblemResults = [false, false];
+            modalState = 'practice';
+            renderMiniPractice();
+        }
+        
+        function renderMiniPractice() {
+            let html = `<div class="mini-practice">
+                <h3>🎯 Now try 2 similar problems!</h3>
+                <div class="progress-indicator">
+                    <div class="progress-dot ${miniProblemResults[0] ? 'completed' : ''}"></div>
+                    <div class="progress-dot ${miniProblemResults[1] ? 'completed' : ''}"></div>
+                </div>`;
+            
+            miniProblems.forEach((problem, index) => {
+                const isCompleted = miniProblemResults[index];
+                html += `<div class="mini-problem ${isCompleted ? 'completed' : ''}" id="miniProblem${index}">
+                    <div><strong>Problem ${index + 1}:</strong></div>
+                    <div class="problem">${problem.num1} ${problem.operation} ${problem.num2} = ?</div>`;
+                
+                html += createMiniNumberLine(problem.num1, problem.num2, problem.answer);
+                
+                if (!isCompleted) {
+                    html += `<input type="number" id="miniAnswer${index}" placeholder="Your answer">
+                        <button onclick="checkMiniProblem(${index})">Submit</button>
+                        <div id="miniFeedback${index}"></div>`;
+                } else {
+                    html += `<div class="feedback-message correct">✅ Correct! Answer: ${problem.answer}</div>`;
+                }
+                
+                html += `</div>`;
+            });
+            
+            const allCompleted = miniProblemResults.every(r => r);
+            html += `<button class="btn-success" onclick="closeFeedbackModal()" ${!allCompleted ? 'disabled' : ''}>
+                ${allCompleted ? 'Done! Return to Practice' : 'Complete both problems to continue'}
+            </button>`;
+            
+            html += '</div>';
+            
+            document.getElementById('modalContent').innerHTML = html;
+        }
+        
+        function checkMiniProblem(index) {
+            const problem = miniProblems[index];
+            const userAnswer = parseInt(document.getElementById(`miniAnswer${index}`).value);
+            const isCorrect = userAnswer === problem.answer;
+            
+            const feedback = document.getElementById(`miniFeedback${index}`);
+            
+            if (isCorrect) {
+                miniProblemResults[index] = true;
+                feedback.innerHTML = `<div class="feedback-message correct">✅ Correct!</div>`;
+                setTimeout(() => {
+                    renderMiniPractice();
+                }, 1000);
+            } else {
+                feedback.innerHTML = `<div class="feedback-message incorrect">❌ Not quite. Try again!</div>`;
+                document.getElementById(`miniAnswer${index}`).value = '';
+                document.getElementById(`miniAnswer${index}`).focus();
+            }
         }
 
         function closeFeedbackModal() {
@@ -2560,7 +2916,9 @@ function setupTeacherDashboardListener() {
         // Event Listeners
         document.addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
-                if (!document.getElementById('practiceScreen').classList.contains('hidden')) {
+                if (modalState === 'steps' && document.getElementById('stepsInput')) {
+                    checkSteps();
+                } else if (!document.getElementById('practiceScreen').classList.contains('hidden')) {
                     submitAnswer();
                 } else if (!document.getElementById('loginScreen').classList.contains('hidden')) {
                     studentLogin();
