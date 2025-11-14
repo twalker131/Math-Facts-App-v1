@@ -825,6 +825,46 @@ let teacherMasteryCache = {
 };
 let teacherDashboardListener = null; // Real-time listener
 
+// Firebase Read Tracking
+let firebaseReadCount = 0;
+let readLog = [];
+
+function trackRead(operation, count = 1) {
+    firebaseReadCount += count;
+    const logEntry = {
+        operation: operation,
+        count: count,
+        total: firebaseReadCount,
+        timestamp: new Date().toLocaleTimeString()
+    };
+    readLog.push(logEntry);
+    console.log(`🔍 Firebase Read: ${operation} (+${count} read${count !== 1 ? 's' : ''}) | Total: ${firebaseReadCount}`);
+}
+
+function showReadStats() {
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log(`📊 FIREBASE READ STATISTICS`);
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log(`Total Reads: ${firebaseReadCount}`);
+    console.log(`Operations: ${readLog.length}`);
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    if (readLog.length > 0) {
+        readLog.forEach((entry, i) => {
+            console.log(`${i + 1}. [${entry.timestamp}] ${entry.operation}: ${entry.count} read(s) | Running total: ${entry.total}`);
+        });
+    } else {
+        console.log('No Firebase reads recorded yet.');
+    }
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+}
+
+function resetReadCount() {
+    const previousCount = firebaseReadCount;
+    firebaseReadCount = 0;
+    readLog = [];
+    console.log(`✅ Firebase read count reset (previous total: ${previousCount})`);
+}
+        
 // Interactive Modal State
 let modalState = 'direction'; // direction, steps, solution, practice
 let directionAnswer = null;
@@ -896,8 +936,10 @@ let miniProblemResults = [false, false];
             // No cache - load from Firebase
             try {
                 console.log('📥 No students cache found, loading from Firebase...');
-                const snapshot = await db.collection('students').get();
-                const firebaseStudents = [];
+const snapshot = await db.collection('students').get();
+trackRead('Load students collection', snapshot.size);
+
+const firebaseStudents = [];
                 
                 snapshot.forEach(doc => {
                     firebaseStudents.push({ id: doc.id, ...doc.data() });
@@ -1752,6 +1794,17 @@ async function showTeacherDashboard() {
     updateStudentList();
     populateFilterOptions();
     
+    // Reset read counter for this session
+    resetReadCount();
+    
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('📊 Firebase Read Tracking Active!');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('Use these commands in the console:');
+    console.log('  showReadStats() - Show detailed read statistics');
+    console.log('  resetReadCount() - Reset the counter to zero');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    
     // Check cache and prompt if needed
     await checkCacheAndPrompt();
     
@@ -2049,9 +2102,10 @@ async function uploadCSV() {
                     try {
                         console.log('Deleting all students from Firebase...');
                         
-                        const snapshot = await db.collection('students').get();
-                        
-                        if (!snapshot.empty) {
+const snapshot = await db.collection('students').get();
+trackRead('Clear all students query', snapshot.size);
+
+if (!snapshot.empty) {
                             const batch = db.batch();
                             snapshot.forEach(doc => {
                                 batch.delete(doc.ref);
@@ -2061,8 +2115,10 @@ async function uploadCSV() {
                             console.log('All students deleted from Firebase');
                         }
                         
-                        const attemptsSnapshot = await db.collection('problemAttempts').get();
-                        if (!attemptsSnapshot.empty) {
+const attemptsSnapshot = await db.collection('problemAttempts').get();
+trackRead('Clear all problem attempts query', attemptsSnapshot.size);
+
+if (!attemptsSnapshot.empty) {
                             const attemptsBatch = db.batch();
                             attemptsSnapshot.forEach(doc => {
                                 attemptsBatch.delete(doc.ref);
@@ -2098,11 +2154,13 @@ async function uploadCSV() {
                         await db.collection('students').doc(student.id).delete();
                         console.log('Student document deleted from Firebase');
                         
-                        const attemptsSnapshot = await db.collection('problemAttempts')
-                            .where('studentId', '==', student.id)
-                            .get();
-                        
-                        if (!attemptsSnapshot.empty) {
+const attemptsSnapshot = await db.collection('problemAttempts')
+    .where('studentId', '==', student.id)
+    .get();
+
+trackRead(`Delete student ${student.id} attempts query`, attemptsSnapshot.size);
+
+if (!attemptsSnapshot.empty) {
                             const batch = db.batch();
                             attemptsSnapshot.forEach(doc => {
                                 batch.delete(doc.ref);
@@ -2508,7 +2566,8 @@ function isInMasteryBucket(masteryRate, bucket) {
 
   async function loadStudentProgressFromCache(studentId) {
     try {
-        console.log('Loading student progress from cache (zero reads)');
+      console.log('✅ Loading student progress from cache (0 Firebase reads - using localStorage)');
+
         
         // Get cached mastery data - no Firebase read!
         const masteryData = await getCachedMasteryData();
@@ -2801,12 +2860,14 @@ async function loadMasteryDataForAllStudents() {
     console.log('Loading ALL problem attempts in a single query...');
     
     try {
-        const snapshot = await db.collection('problemAttempts')
-            .orderBy('timestamp', 'desc')
-            .limit(50 * students.length)
-            .get();
-        
-        console.log(`Loaded ${snapshot.size} total attempts in single query`);
+const snapshot = await db.collection('problemAttempts')
+    .orderBy('timestamp', 'desc')
+    .limit(50 * students.length)
+    .get();
+
+trackRead('Load all problem attempts', snapshot.size);
+
+console.log(`Loaded ${snapshot.size} total attempts in single query`);
         
         const masteryData = {};
         
@@ -2913,10 +2974,12 @@ function setupTeacherDashboardListener() {
     
     teacherDashboardListener = db.collection('problemAttempts')
         .where('timestamp', '>', new Date())
-        .onSnapshot(snapshot => {
-            if (snapshot.empty) return;
-            
-            console.log('Received', snapshot.size, 'new problem attempts');
+.onSnapshot(snapshot => {
+    if (snapshot.empty) return;
+    
+    trackRead('Real-time listener update', snapshot.size);
+    
+    console.log('Received', snapshot.size, 'new problem attempts');
             
             snapshot.docChanges().forEach(change => {
                 if (change.type === 'added') {
@@ -2975,10 +3038,12 @@ function setupTeacherDashboardListener() {
         });
 
         // Initialize application when page loads
-        window.addEventListener('load', function() {
-            console.log('Page loaded, initializing application...');
-            initFirebase();
-        });
+window.addEventListener('load', function() {
+    console.log('Page loaded, initializing application...');
+    console.log('🔍 Firebase Read Tracking: Enabled');
+    console.log('   Type showReadStats() in console to see statistics');
+    initFirebase();
+});
     </script>
 </body>
 </html>
