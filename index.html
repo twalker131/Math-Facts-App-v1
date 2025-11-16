@@ -1136,6 +1136,8 @@ html += '<div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 
                         .limit(70)
                         .get();
                     
+                    trackRead(`Student ${studentId} login - refresh cache`, snapshot.size);
+                    
                     const allAttempts = [];
                     snapshot.forEach(doc => {
                         const data = doc.data();
@@ -1169,6 +1171,8 @@ html += '<div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 
                         .orderBy('timestamp', 'desc')
                         .limit(70)
                         .get();
+                    
+                    trackRead(`Student ${studentId} login - load attempts (first time)`, snapshot.size);
                     
                     currentStudentAttempts = [];
                     snapshot.forEach(doc => {
@@ -3044,6 +3048,46 @@ window.addEventListener('load', function() {
     console.log('   Type showReadStats() in console to see statistics');
     initFirebase();
 });
+
+// CRITICAL: Cleanup Firebase listeners when page is closed/hidden
+// This prevents listeners from running 24/7 and racking up Firebase reads
+
+// Detach listener when browser tab/window is closed
+window.addEventListener('beforeunload', function() {
+    if (teacherDashboardListener) {
+        console.log('🔌 Detaching Firebase listener - page closing');
+        teacherDashboardListener(); // Call the unsubscribe function
+        teacherDashboardListener = null;
+    }
+});
+
+// Detach listener when page becomes hidden (tab switched, minimized, etc.)
+document.addEventListener('visibilitychange', function() {
+    if (document.hidden && teacherDashboardListener) {
+        console.log('🔌 Detaching Firebase listener - page hidden');
+        teacherDashboardListener();
+        teacherDashboardListener = null;
+    } else if (!document.hidden && !teacherDashboardListener) {
+        // Re-attach listener when page becomes visible again (if teacher screen is open)
+        const teacherScreenVisible = !document.getElementById('teacherScreen').classList.contains('hidden');
+        if (teacherScreenVisible) {
+            console.log('🔌 Re-attaching Firebase listener - page visible again');
+            setupTeacherDashboardListener();
+        }
+    }
+});
+
+// Detach listener when navigating away from teacher screen
+const originalShowScreen = showScreen;
+showScreen = function(screenId) {
+    // If leaving teacher screen, clean up listener
+    if (screenId !== 'teacherScreen' && teacherDashboardListener) {
+        console.log('🔌 Detaching Firebase listener - leaving teacher screen');
+        teacherDashboardListener();
+        teacherDashboardListener = null;
+    }
+    originalShowScreen(screenId);
+};
     </script>
 </body>
 </html>
